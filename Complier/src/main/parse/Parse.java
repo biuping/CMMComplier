@@ -10,7 +10,6 @@ public class Parse {
     private int index = 0;
     private Token currentToken = null;
     private int errorCount=0;
-    private String errorInfo="";
     private boolean isArray = false;
     //语法树根节点
     private static TreeNode root;
@@ -35,13 +34,6 @@ public class Parse {
         this.errorCount = errorCount;
     }
 
-    public String getErrorInfo() {
-        return errorInfo;
-    }
-
-    public void setErrorInfo(String errorInfo) {
-        this.errorInfo = errorInfo;
-    }
 
     public Parse(ArrayList<Token> tokens){
         this.tokens=tokens;
@@ -129,13 +121,13 @@ public class Parse {
         }
         //print语句
         else if (currentToken!=null && currentToken.getTag()==Tag.PRINT){
-            TreeNode printNode = new TreeNode("关键字","print",currentToken.getLineNum());
+            TreeNode printNode = new TreeNode("关键字","print",currentToken.getTag(),currentToken.getLineNum());
             printNode.add(print_sta());
             temp=printNode;
         }
         //scan语句
         else if (currentToken!=null && currentToken.getTag()==Tag.SCAN){
-            TreeNode scanNode = new TreeNode("关键字","scan",currentToken.getLineNum());
+            TreeNode scanNode = new TreeNode("关键字","scan",currentToken.getTag(),currentToken.getLineNum());
             scanNode.add(scan_sta());
             temp=scanNode;
         }
@@ -171,7 +163,7 @@ public class Parse {
         // else语句是否有大括号,默认为true
         boolean hasElseBrace = true;
         //建立if函数根节点
-        TreeNode ifTreeNode = new TreeNode("关键字","if",currentToken.getLineNum());
+        TreeNode ifTreeNode = new TreeNode("关键字","if",currentToken.getTag(),currentToken.getLineNum());
         nextToken();
         //匹配if之后左括号
         if (currentToken!=null&&currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("(")){
@@ -182,7 +174,7 @@ public class Parse {
             ifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
         //括号中的条件语句加入TreeNode
-        TreeNode conditionNode = new TreeNode("条件语句","condition",currentToken.getLineNum());
+        TreeNode conditionNode = new TreeNode("条件语句","condition",1,currentToken.getLineNum());
         ifTreeNode.add(conditionNode);
         conditionNode.add(condition());
         //匹配右括号
@@ -204,7 +196,7 @@ public class Parse {
 
 
         //检测statement
-        TreeNode statementNode = new TreeNode("代码段","Statements",currentToken.getLineNum());
+        TreeNode statementNode = new TreeNode("代码段","Statements",0,currentToken.getLineNum());
         ifTreeNode.add(statementNode);
         if (hasIfBrace){
             while (currentToken != null) {
@@ -238,7 +230,7 @@ public class Parse {
         }
         //处理else
         if (currentToken != null && currentToken.getTag()==Tag.ELSE) {
-            TreeNode elseNode = new TreeNode("关键字", "else", currentToken.getLineNum());
+            TreeNode elseNode = new TreeNode("关键字", "else",currentToken.getTag(), currentToken.getLineNum());
             ifTreeNode.add(elseNode);
             nextToken();
             // 匹配左大括号{
@@ -278,7 +270,7 @@ public class Parse {
         // 是否有大括号,默认为true
         boolean hasBrace = true;
 
-        TreeNode whileNode = new TreeNode("关键字", "while", currentToken.getLineNum());
+        TreeNode whileNode = new TreeNode("关键字", "while", currentToken.getTag(),currentToken.getLineNum());
         nextToken();
         //匹配while后的左括号
         if (currentToken!=null&&currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("(")){
@@ -289,7 +281,7 @@ public class Parse {
             whileNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
         //括号中的条件语句加入TreeNode
-        TreeNode conditionNode = new TreeNode("条件语句","condition",currentToken.getLineNum());
+        TreeNode conditionNode = new TreeNode("条件语句","condition",1,currentToken.getLineNum());
         whileNode.add(conditionNode);
         conditionNode.add(condition());
         //匹配右括号
@@ -309,7 +301,7 @@ public class Parse {
         }
 
         //检测statement
-        TreeNode statementNode = new TreeNode("代码段","Statements",currentToken.getLineNum());
+        TreeNode statementNode = new TreeNode("代码段","Statements",0,currentToken.getLineNum());
         whileNode.add(statementNode);
         if (hasBrace){
             while (currentToken != null && !currentToken.getContent().equals("}")) {
@@ -353,7 +345,7 @@ public class Parse {
     private TreeNode for_sta(){
         boolean hasBrace = true;
         //for根节点
-        TreeNode forNode = new TreeNode("关键字","for",currentToken.getLineNum());
+        TreeNode forNode = new TreeNode("关键字","for",currentToken.getTag(),currentToken.getLineNum());
         nextToken();
         //匹配for后的左括号
         if (currentToken!=null&&currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("(")){
@@ -367,11 +359,11 @@ public class Parse {
         TreeNode AD_Node;
         if (currentToken!=null && (currentToken.getTag()==Tag.INT ||
                 currentToken.getTag()==Tag.REAL || currentToken.getTag()==Tag.CHAR)){
-            AD_Node = new TreeNode("declare","Declare",currentToken.getLineNum());
+            AD_Node = new TreeNode("declare","Declare",2,currentToken.getLineNum());
             AD_Node.add(declare(true));
             forNode.add(AD_Node);
         }else if (currentToken!=null && currentToken.getTag()==Tag.ID){
-            AD_Node = new TreeNode("assign","Assign",currentToken.getLineNum());
+            AD_Node = new TreeNode("assign","Assign",3,currentToken.getLineNum());
             AD_Node.add(assign_sta(true));
             forNode.add(AD_Node);
         }else{
@@ -387,7 +379,7 @@ public class Parse {
             forNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
         //条件语句
-        TreeNode conNode = new TreeNode("条件语句","Condition",currentToken.getLineNum());
+        TreeNode conNode = new TreeNode("条件语句","Condition",1,currentToken.getLineNum());
         conNode.add(condition());
         forNode.add(conNode);
 
@@ -401,7 +393,7 @@ public class Parse {
         }
 
         //赋值语句
-        TreeNode assignNode = new TreeNode("赋值语句","Assign",currentToken.getLineNum());
+        TreeNode assignNode = new TreeNode("赋值语句","Assign",3,currentToken.getLineNum());
         assignNode.add(assign_sta(true));
         forNode.add(assignNode);
 
@@ -423,7 +415,7 @@ public class Parse {
             hasBrace=false;
         }
 
-        TreeNode staNode = new TreeNode("代码段","Statement",currentToken.getLineNum());
+        TreeNode staNode = new TreeNode("代码段","Statement",0,currentToken.getLineNum());
         forNode.add(staNode);
         if (hasBrace){
             while(currentToken!=null){
@@ -513,7 +505,7 @@ public class Parse {
      * 格式：scan(ID);
      * */
     private TreeNode scan_sta(){
-        TreeNode temp =new TreeNode("scan","Scan",currentToken.getLineNum());
+        TreeNode temp =new TreeNode("scan","Scan",currentToken.getTag(),currentToken.getLineNum());
         nextToken();
         //匹配scan后的左括号
         if (currentToken!=null&&currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("(")){
@@ -549,15 +541,6 @@ public class Parse {
             PError error = setError("scan之后缺少右括号\")\"");
             temp.add(new TreeNode("Error"+errorCount,error.toString()));
         }
-//        //结尾分号
-//        if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR &&
-//                currentToken.getContent().equals(";")){
-//            nextToken();
-//        }else {
-//            PError error = setError("scan之后缺少分号\";\"");
-//            temp.add(new TreeNode("Error"+errorCount,error.toString()));
-//            return temp;
-//        }
         return temp;
     }
 
@@ -570,8 +553,8 @@ public class Parse {
      * */
     private TreeNode assign_sta(boolean isFor){
         //创建=根结点
-        TreeNode assignNode = new TreeNode("运算符","=",currentToken.getLineNum());
-        TreeNode idNode = new TreeNode("标识符",currentToken.getContent(),currentToken.getLineNum());
+        TreeNode assignNode = new TreeNode("运算符","=",currentToken.getTag(),currentToken.getLineNum());
+        TreeNode idNode = new TreeNode("标识符",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
         assignNode.add(idNode);
         nextToken();
 
@@ -619,7 +602,7 @@ public class Parse {
      * (declare_sub)可多次出现 目的在于实现同类型多个标识符声明
      */
     private TreeNode declare(boolean isFor){
-        TreeNode declareNode = new TreeNode("关键字",currentToken.getContent(),currentToken.getLineNum());
+        TreeNode declareNode = new TreeNode("关键字",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
         boolean isChar = false;
         if (currentToken!=null && currentToken.getTag()==Tag.CHAR)
             isChar=true;
@@ -656,7 +639,7 @@ public class Parse {
     private TreeNode declare_sub(TreeNode rootNode,boolean isChar){
         boolean isArray=false;
         if (currentToken!=null && currentToken.getTag()==Tag.ID){
-            TreeNode idNode = new TreeNode("标识符",currentToken.getContent(),currentToken.getLineNum());
+            TreeNode idNode = new TreeNode("标识符",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
             rootNode.add(idNode);
             nextToken();
 
@@ -679,7 +662,7 @@ public class Parse {
 
         if (currentToken!=null && currentToken.getTag()==Tag.ASSIGN){
 
-            TreeNode assignNode = new TreeNode("运算符","=",currentToken.getLineNum());
+            TreeNode assignNode = new TreeNode("运算符","=",currentToken.getTag(),currentToken.getLineNum());
             rootNode.add(assignNode);
             nextToken();
             if (!isArray)
@@ -691,7 +674,7 @@ public class Parse {
                     assignNode.add(arrayDeclare());
                 }else if (currentToken != null && currentToken.getTag()==Tag.STRING && isChar){
                     //char数组 字符串声明方式
-                    assignNode.add(new TreeNode("字符串",currentToken.getContent(),currentToken.getLineNum()));
+                    assignNode.add(new TreeNode("字符串",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum()));
                 }
                 else {
                     PError error = setError("数组声明缺少左大括号\"{\"");
@@ -714,7 +697,7 @@ public class Parse {
      * 格式：break;
      */
     private TreeNode break_sta(){
-        TreeNode breakNode = new TreeNode("关键字","break",currentToken.getLineNum());
+        TreeNode breakNode = new TreeNode("关键字","break",currentToken.getTag(),currentToken.getLineNum());
         nextToken();
         if (currentToken!=null && !(currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";"))){
             PError error = setError("break之后缺少分号\";\"");
@@ -729,7 +712,7 @@ public class Parse {
      * 格式：break;
      */
     private TreeNode continue_sta(){
-        TreeNode continueNode = new TreeNode("关键字","continue",currentToken.getLineNum());
+        TreeNode continueNode = new TreeNode("关键字","continue",currentToken.getTag(),currentToken.getLineNum());
         nextToken();
         if (currentToken!=null && !(currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";"))){
             PError error = setError("continue之后缺少分号\";\"");
@@ -740,7 +723,7 @@ public class Parse {
     }
 
     private TreeNode arrayDeclare(){
-        TreeNode temp = new TreeNode("array_declare","Declare",currentToken.getLineNum());
+        TreeNode temp = new TreeNode("array_declare","Declare",2,currentToken.getLineNum());
         TreeNode conNodeFirst = condition();
         temp.add(conNodeFirst);
         while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR
@@ -896,13 +879,13 @@ public class Parse {
     private TreeNode factor(){
         TreeNode temp;
         if (currentToken != null && currentToken.getTag()==Tag.INTNUM){
-            temp = new TreeNode("整数",currentToken.getContent(),currentToken.getLineNum());
+            temp = new TreeNode("整数",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.REALNUM){
-            temp = new TreeNode("实数",currentToken.getContent(),currentToken.getLineNum());
+            temp = new TreeNode("实数",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.ID){
-            temp = new TreeNode("标识符",currentToken.getContent(),currentToken.getLineNum());
+            temp = new TreeNode("标识符",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
             nextToken();
             //数组情况
             if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR
@@ -910,7 +893,7 @@ public class Parse {
                 temp.add(array());
             }
         }else if (currentToken!=null && currentToken.getTag()==Tag.STRING){
-            temp = new TreeNode("字符串",currentToken.getContent(),currentToken.getLineNum());
+            temp = new TreeNode("字符串",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }
         else if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("(")){
@@ -926,9 +909,12 @@ public class Parse {
                 return new TreeNode("Error"+errorCount,error.toString());
             }
         }
+        else if (currentToken!=null && currentToken.getTag()==Tag.SCAN){
+            temp=scan_sta();
+        }
         //匹配字符
         else if (currentToken != null && currentToken.getTag()==Tag.CHAR_S){
-            temp=new TreeNode("字符",currentToken.getContent(),currentToken.getLineNum());
+            temp=new TreeNode("字符",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
             nextToken();
 
         }else {
@@ -958,7 +944,7 @@ public class Parse {
         }
 
         if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("]")){
-            temp = new TreeNode("undefined","Undefined",currentToken.getLineNum());
+            temp = new TreeNode("undefined","Undefined",4,currentToken.getLineNum());
             nextToken();
         }
 
@@ -984,10 +970,10 @@ public class Parse {
     private TreeNode as_op(){
         TreeNode temp;
         if (currentToken != null && currentToken.getTag()==Tag.ADD) {
-            temp = new TreeNode("运算符", "+", currentToken.getLineNum());
+            temp = new TreeNode("运算符", "+", currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.SUB){
-            temp=new TreeNode("运算符", "-", currentToken.getLineNum());
+            temp=new TreeNode("运算符", "-", currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }else {
             PError error = setError("加减符号出错");
@@ -1003,10 +989,10 @@ public class Parse {
     private TreeNode md_op(){
         TreeNode temp;
         if (currentToken != null && currentToken.getTag()==Tag.MUL){
-            temp = new TreeNode("运算符","*",currentToken.getLineNum());
+            temp = new TreeNode("运算符","*",currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.DIVIDE){
-            temp = new TreeNode("运算符","/",currentToken.getLineNum());
+            temp = new TreeNode("运算符","/",currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }else{
             PError error = setError("乘除符号出错");
@@ -1022,36 +1008,36 @@ public class Parse {
     private TreeNode comparison_op(){
         TreeNode temp;
         if (currentToken != null && currentToken.getTag()==Tag.GREATER) {
-            temp = new TreeNode("运算符", ">", currentToken.getLineNum());
+            temp = new TreeNode("运算符", ">",currentToken.getTag(), currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.LESS){
-            temp = new TreeNode("运算符", "<", currentToken.getLineNum());
+            temp = new TreeNode("运算符", "<", currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.GE){
-            temp = new TreeNode("运算符", ">=", currentToken.getLineNum());
+            temp = new TreeNode("运算符", ">=",currentToken.getTag(), currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.LE){
-            temp = new TreeNode("运算符", "<=", currentToken.getLineNum());
+            temp = new TreeNode("运算符", "<=",currentToken.getTag(), currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.EQ){
-            temp = new TreeNode("运算符", "==", currentToken.getLineNum());
+            temp = new TreeNode("运算符", "==",currentToken.getTag(), currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.UE){
-            temp = new TreeNode("运算符", "<>", currentToken.getLineNum());
+            temp = new TreeNode("运算符", "<>",currentToken.getTag(), currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.OR){
-            temp = new TreeNode("运算符", "||", currentToken.getLineNum());
+            temp = new TreeNode("运算符", "||", currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }else if (currentToken != null && currentToken.getTag()==Tag.AND){
-            temp = new TreeNode("运算符", "&&", currentToken.getLineNum());
+            temp = new TreeNode("运算符", "&&", currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }
         else if (currentToken != null && currentToken.getTag()==Tag.BOR){
-            temp = new TreeNode("运算符", "|", currentToken.getLineNum());
+            temp = new TreeNode("运算符", "|", currentToken.getTag(),currentToken.getLineNum());
             nextToken();
         }
         else if (currentToken != null && currentToken.getTag()==Tag.BAND){
-            temp = new TreeNode("运算符", "&", currentToken.getLineNum());
+            temp = new TreeNode("运算符", "&",currentToken.getTag(), currentToken.getLineNum());
             nextToken();
         }else {
             PError error = setError("无法识别符号");

@@ -5,6 +5,16 @@ import javax.swing.tree.DefaultMutableTreeNode;
 public class TreeNode extends DefaultMutableTreeNode {
     private String kind;
     private String content;
+    private int tag;
+
+    public int getTag() {
+        return tag;
+    }
+
+    public void setTag(int tag) {
+        this.tag = tag;
+    }
+
     private int lineNum;
 
     public String  getKind() {
@@ -61,6 +71,14 @@ public class TreeNode extends DefaultMutableTreeNode {
         this.content = content;
         this.lineNum = lineNum;
         this.kind = k;
+    }
+
+    public TreeNode(String  k, String content,int t,int lineNum) {
+        super(content);
+        this.kind = k;
+        this.content = content;
+        this.tag=t;
+        this.lineNum = lineNum;
     }
 
     //添加孩子节点

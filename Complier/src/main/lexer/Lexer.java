@@ -10,8 +10,6 @@ public class Lexer {
     private static boolean isPositive = false;
     private static boolean isNegative = false;
     private boolean isChar = false;
-    // 错误信息
-    private String errorInfo = "";
     // 分析后得到的tokens集合，用于其后的语法及语义分析
     private ArrayList<Token> tokens = new ArrayList<Token>();
     // 读取CMM文件文本
@@ -35,14 +33,6 @@ public class Lexer {
         isNotation = notation;
     }
 
-
-    public String getErrorInfo() {
-        return errorInfo;
-    }
-
-    public void setErrorInfo(String errorInfo) {
-        this.errorInfo = errorInfo;
-    }
 
     public ArrayList<Token> getTokens() {
         return tokens;
