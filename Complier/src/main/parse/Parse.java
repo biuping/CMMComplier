@@ -51,6 +51,14 @@ public class Parse {
         return root;
     }
 
+    private void lastToken(){
+        --index;
+        if (index < 0) {
+            currentToken = null;
+        }
+        currentToken = tokens.get(index);
+    }
+
     private void nextToken(){
         ++index;
         if (index > tokens.size() - 1) {
@@ -128,12 +136,22 @@ public class Parse {
         //scan语句
         else if (currentToken!=null && currentToken.getTag()==Tag.SCAN){
             TreeNode scanNode = new TreeNode("关键字","scan",currentToken.getTag(),currentToken.getLineNum());
-            scanNode.add(scan_sta());
+            scanNode.add(scan_sta(false));
             temp=scanNode;
         }
         //赋值语句
         else if (currentToken!=null && currentToken.getTag()==Tag.ID){
-            temp=assign_sta(false);
+            nextToken();
+            if (currentToken!=null && currentToken.getTag()==Tag.ASSIGN){
+                lastToken();
+                temp=assign_sta(false);
+            }else{
+                lastToken();
+                temp=conditionTop();
+            }
+        }else if (currentToken!=null && (currentToken.getTag()==Tag.INTNUM||currentToken.getTag()==Tag.CHAR_S||
+                currentToken.getTag()==Tag.REALNUM || currentToken.getTag()==Tag.STRING)){
+            temp=conditionTop();
         }
         //break
         else if (currentToken!=null && currentToken.getTag()==Tag.BREAK){
@@ -142,6 +160,11 @@ public class Parse {
         //continue
         else if (currentToken!=null && currentToken.getTag()==Tag.CONTINUE){
             temp=continue_sta();
+        }else if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
+            while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
+                nextToken();
+            }
+            temp=statement();
         }
         //出错
         else {
@@ -229,37 +252,112 @@ public class Parse {
                 statementNode.add(statement());
         }
         //处理else
-        if (currentToken != null && currentToken.getTag()==Tag.ELSE) {
-            TreeNode elseNode = new TreeNode("关键字", "else",currentToken.getTag(), currentToken.getLineNum());
-            ifTreeNode.add(elseNode);
+        while (currentToken != null && currentToken.getTag()==Tag.ELSE) {
             nextToken();
-            // 匹配左大括号{
-            if (currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("{")) {
-                nextToken();
-            } else {
-                hasElseBrace = false;
-            }
-            if (hasElseBrace) {
-                // statement
-                while (currentToken != null && !currentToken.getContent().equals("}")) {
-                    elseNode.add(statement());
-                }
-                // 匹配右大括号}
-                if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR
-                        && currentToken.getContent().equals("}")) {
+            if (currentToken != null && currentToken.getTag()==Tag.IF){
+                ifTreeNode.add(elseif_sta());
+            }else {
+                TreeNode elseNode = new TreeNode("关键字", "else",currentToken.getTag(), currentToken.getLineNum());
+                ifTreeNode.add(elseNode);
+                // 匹配左大括号{
+                if (currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("{")) {
                     nextToken();
                 } else {
-                    PError error = setError("else语句缺少右大括号\"}\"");
-                    elseNode.add(new TreeNode("Error"+errorCount, error.toString()));
+                    hasElseBrace = false;
                 }
-            } else {
-                if (currentToken != null)
-                    elseNode.add(statement());
+                if (hasElseBrace) {
+                    // statement
+                    while (currentToken != null && !currentToken.getContent().equals("}")) {
+                        elseNode.add(statement());
+                    }
+                    // 匹配右大括号}
+                    if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR
+                            && currentToken.getContent().equals("}")) {
+                        nextToken();
+                    } else {
+                        PError error = setError("else语句缺少右大括号\"}\"");
+                        elseNode.add(new TreeNode("Error"+errorCount, error.toString()));
+                    }
+                } else {
+                    if (currentToken != null)
+                        elseNode.add(statement());
+                }
             }
+
+        }
+        return ifTreeNode;
+    }
+
+    private TreeNode elseif_sta(){
+        // if语句是否有大括号,默认为true
+        boolean hasIfBrace = true;
+        //建立if函数根节点
+        TreeNode elseifTreeNode = new TreeNode("关键字","else if",currentToken.getTag(),currentToken.getLineNum());
+        nextToken();
+        //匹配if之后左括号
+        if (currentToken!=null&&currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("(")){
+            nextToken();
+        }else {
+            //错误
+            PError error = setError("elseif之后缺少左括号\"(\"");
+            elseifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
+        }
+        //括号中的条件语句加入TreeNode
+        TreeNode conditionNode = new TreeNode("条件语句","condition",1,currentToken.getLineNum());
+        elseifTreeNode.add(conditionNode);
+        conditionNode.add(condition());
+        //匹配右括号
+        if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR &&
+                currentToken.getContent().equals(")")){
+            nextToken();
+        }else {
+            PError error = setError("elseif之后缺少右括号\")\"");
+            elseifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
+        }
+
+        //匹配左大括号
+        if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR &&
+                currentToken.getContent().equals("{")){
+            nextToken();
+        }else {
+            hasIfBrace=false;
         }
 
 
-        return ifTreeNode;
+        //检测statement
+        TreeNode statementNode = new TreeNode("代码段","Statements",0,currentToken.getLineNum());
+        elseifTreeNode.add(statementNode);
+        if (hasIfBrace){
+            while (currentToken != null) {
+                if (!currentToken.getContent().equals("}"))
+                    statementNode.add(statement());
+                else if (statementNode.getChildCount() == 0) {
+                    elseifTreeNode.remove(elseifTreeNode.getChildCount() - 1);
+                    statementNode.setContent("EmptyStatement");
+                    elseifTreeNode.add(statementNode);
+                    break;
+                } else {
+                    break;
+                }
+            }
+            //匹配右大括号
+            if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR &&
+                    currentToken.getContent().equals("}")){
+                nextToken();
+            }else {
+                PError error = setError("if语句缺少右大括号\"}\"");
+                elseifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
+            }
+        }else {
+            if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR &&
+                    currentToken.getContent().equals(";")){
+                statementNode.setContent("EmptyStatement");
+                elseifTreeNode.add(statementNode);
+                nextToken();
+            }else if (currentToken != null && currentToken.getTag()!=Tag.ELSE)
+                statementNode.add(statement());
+        }
+        return elseifTreeNode;
     }
 
     /**
@@ -373,7 +471,9 @@ public class Parse {
         //匹配第一个分号
         if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR &&
             currentToken.getContent().equals(";")){
-            nextToken();
+            while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
+                nextToken();
+            }
         }else {
             PError error = setError("for缺少分号\";\"");
             forNode.add(new TreeNode("Error"+errorCount,error.toString()));
@@ -491,7 +591,9 @@ public class Parse {
         //结尾分号
         if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR &&
             currentToken.getContent().equals(";")){
-            nextToken();
+            while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
+                nextToken();
+            }
         }else {
             PError error = setError("print之后缺少分号\";\"");
             temp.add(new TreeNode("Error"+errorCount,error.toString()));
@@ -504,7 +606,7 @@ public class Parse {
      * scan语句
      * 格式：scan(ID);
      * */
-    private TreeNode scan_sta(){
+    private TreeNode scan_sta(boolean isDeclare){
         TreeNode temp =new TreeNode("scan","Scan",currentToken.getTag(),currentToken.getLineNum());
         nextToken();
         //匹配scan后的左括号
@@ -540,6 +642,17 @@ public class Parse {
         }else {
             PError error = setError("scan之后缺少右括号\")\"");
             temp.add(new TreeNode("Error"+errorCount,error.toString()));
+        }
+        if (!isDeclare){
+            //结尾分号
+            if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR &&
+                    currentToken.getContent().equals(";")){
+                nextToken();
+            }else {
+                PError error = setError("scan之后缺少分号\";\"");
+                temp.add(new TreeNode("Error"+errorCount,error.toString()));
+                return temp;
+            }
         }
         return temp;
     }
@@ -586,7 +699,9 @@ public class Parse {
             //结尾分号
             if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR &&
                     currentToken.getContent().equals(";")){
-                nextToken();
+                while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
+                    nextToken();
+                }
             }else {
                 PError error = setError("缺少分号\";\"");
                 assignNode.add(new TreeNode("Error"+errorCount,error.toString()));
@@ -621,7 +736,9 @@ public class Parse {
         if (!isFor){
             if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR &&
                     currentToken.getContent().equals(";") ){
-                nextToken();
+                while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
+                    nextToken();
+                }
             }else {
                 PError error = setError("声明语句缺少分号");
                 declareNode.add(new TreeNode("Error"+errorCount,error.toString()));
@@ -702,8 +819,11 @@ public class Parse {
         if (currentToken!=null && !(currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";"))){
             PError error = setError("break之后缺少分号\";\"");
             breakNode.add(new TreeNode(error.toString()));
-        }else
-            nextToken();
+        }else{
+            while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
+                nextToken();
+            }
+        }
         return breakNode;
     }
 
@@ -717,8 +837,12 @@ public class Parse {
         if (currentToken!=null && !(currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";"))){
             PError error = setError("continue之后缺少分号\";\"");
             continueNode.add(new TreeNode(error.toString()));
-        }else
-            nextToken();
+        }else{
+            while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
+                nextToken();
+            }
+        }
+
         return continueNode;
     }
 
@@ -738,7 +862,7 @@ public class Parse {
                 break;
             else {
                 if (currentToken.getTag()==Tag.SCAN){
-                    TreeNode conNodeOther = scan_sta();
+                    TreeNode conNodeOther = scan_sta(true);
                     temp.add(conNodeOther);
                 }else {
                     TreeNode conNodeOther = condition();
@@ -746,6 +870,19 @@ public class Parse {
                 }
 
             }
+        }
+        return temp;
+    }
+
+    private TreeNode conditionTop(){
+        TreeNode temp = condition();
+        if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
+            while(currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
+                nextToken();
+            }
+        }else{
+            PError error = setError("缺少分号\";\"");
+            temp.add(new TreeNode(error.toString()));
         }
         return temp;
     }
@@ -763,7 +900,6 @@ public class Parse {
             temp=comparisonNode;
             temp.add(firstCondition());
         }
-
         return temp;
     }
 
@@ -826,7 +962,16 @@ public class Parse {
      * (加减运算符 乘除表达式)可能出现多次
      * */
     private TreeNode expression(){
-        TreeNode temp = mdexperssion();
+        TreeNode temp =null;
+        boolean b = false;
+        if (currentToken != null && (currentToken.getTag()==Tag.ADD
+                || currentToken.getTag()==Tag.SUB)) {
+            TreeNode asNode = as_op();
+            temp=asNode;
+            temp.add(mdexperssion());
+            b=true;
+        }else
+            temp = mdexperssion();
         /**
          *  树：
          *           +or-
@@ -910,7 +1055,7 @@ public class Parse {
             }
         }
         else if (currentToken!=null && currentToken.getTag()==Tag.SCAN){
-            temp=scan_sta();
+            temp=scan_sta(true);
         }
         //匹配字符
         else if (currentToken != null && currentToken.getTag()==Tag.CHAR_S){

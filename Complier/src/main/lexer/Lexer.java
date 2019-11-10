@@ -361,7 +361,7 @@ public class Lexer {
                                 kind = tokens.get(tokens.size()-1).getTag();
                                 context = tokens.get(tokens.size()-1).getContent();
                                 if (kind==Tag.REALNUM||kind==Tag.INTNUM||context.equals(")")||context.equals("]")
-                                        ||kind==Tag.ID||kind==Tag.CHAR){
+                                        ||kind==Tag.ID||kind==Tag.CHAR||context.equals("=")){
                                     Token token = new Token(Tag.SUB,"-",lineNum,index+1);
                                     tokens.add(token);
                                     index--;
