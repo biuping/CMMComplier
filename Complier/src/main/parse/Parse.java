@@ -115,6 +115,10 @@ public class Parse {
                 || currentToken.getTag()==Tag.CHAR)){
             temp=declare(false);
         }
+        //大括号代码块
+        else if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("{")){
+            temp=block_sta();
+        }
         //if语句
         else if (currentToken!=null && currentToken.getTag()==Tag.IF){
             temp=if_sta();
@@ -173,6 +177,20 @@ public class Parse {
             nextToken();
         }
 
+        return temp;
+    }
+
+    private TreeNode block_sta(){
+        nextToken();
+        TreeNode temp = new TreeNode("代码块","block",currentToken.getLineNum());
+        temp.add(statement());
+        if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("}")){
+            nextToken();
+        }else {
+            PError error = setError("缺少右括号");
+            temp.add(new TreeNode("Error"+errorCount,error.toString()));
+            nextToken();
+        }
         return temp;
     }
 
