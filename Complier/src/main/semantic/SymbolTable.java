@@ -23,4 +23,25 @@ public class SymbolTable {
         }
         return null;
     }
+
+    //根据名字对当前作用域进行查找
+    public Symbol getCurrentLevel(String name, int level) {
+        for (Symbol element : symbolTable) {
+            if (element.getName().equals(name) && element.getLevel() == level) {
+                return element;
+            }
+        }
+        return null;
+    }
+
+    //添加symbol
+    public boolean addSymbol(Symbol element) {
+        return symbolTable.add(element);
+    }
+
+    public void addSymbol(int index, Symbol element) {
+        symbolTable.add(index, element);
+    }
+
+
 }
