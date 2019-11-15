@@ -182,7 +182,7 @@ public class Parse {
 
     private TreeNode block_sta(){
         nextToken();
-        TreeNode temp = new TreeNode("代码块","block",currentToken.getLineNum());
+        TreeNode temp = new TreeNode("代码块","block",4,currentToken.getLineNum());
         temp.add(statement());
         if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("}")){
             nextToken();

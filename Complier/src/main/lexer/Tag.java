@@ -5,7 +5,7 @@ import java.util.HashMap;
 
 public class Tag {
     /**
-     *  statement=0,condition=1,declare=2,assign=3
+     *  statement=0,condition=1,declare=2,assign=3 block=4
      * if，else，while,int real，char,print
      *  scan， break，continue,for
      * 减，乘，除，赋值，小于，大于
