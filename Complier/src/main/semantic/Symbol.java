@@ -14,7 +14,7 @@ public class Symbol {
     // 实数数值
     private String realValue;
     // 字符
-    private char charValue;
+    private String charValue;
     // 字符串
     private String stringValue;
     // 是否为数组,0表示不是,正整数表示数组的大小
@@ -29,6 +29,7 @@ public class Symbol {
         this.realValue = "";
         this.stringValue = "";
         this.arraySize = 0;
+        this.charValue = "";
     }
 
     public String getName() {
@@ -79,11 +80,11 @@ public class Symbol {
         this.realValue = realValue;
     }
 
-    public char getCharValue() {
+    public String  getCharValue() {
         return charValue;
     }
 
-    public void setCharValue(char charValue) {
+    public void setCharValue(String charValue) {
         this.charValue = charValue;
     }
 

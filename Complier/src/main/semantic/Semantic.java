@@ -112,9 +112,87 @@ public class Semantic {
      */
     private boolean condition_analyze(TreeNode root){
         String content = root.getContent();
+        int tag = root.getTag();
         if (isInteger(content)){
             return Integer.parseInt(content) != 0;
-        }//Todo else if ()
+        }else if (tag==Tag.ID){
+            if (checkID(root,level)){
+                if (root.getChildCount()!=0){
+                    String str = array_analyze(root.getChildAt(0),
+                            table.getAllLevel(content,level).getArraySize());
+                    if (str!=null)
+                        content += "@" + str;
+                    else
+                        return false;
+                }
+                Symbol symbol = table.getAllLevel(content,level);
+                if (symbol.getTag()==Tag.INT){
+                    int i = Integer.parseInt(symbol.getIntValue());
+                    if (i==0)
+                        return false;
+                    else return true;
+                } else{
+                    setError("不能将变量"+content+"作为判断条件",root.getLineNum());
+                }
+            }else return false;
+        }else if (tag==Tag.EQ || tag == Tag.LE || tag == Tag.GE || tag == Tag.UE
+                || tag == Tag.LESS || tag == Tag.GREATER){
+                String[] children = new String[2];
+                for (int i=0;i<root.getChildCount();i++){
+                    int childTag = root.getChildAt(i).getTag();
+                    String childContent = root.getChildAt(i).getContent();
+                    if (childTag==Tag.OR || childTag==Tag.AND){
+                        if (condition_analyze(root.getChildAt(i)))
+                            children[i]="1";
+                        else
+                            children[i]="0";
+                    }else if (childTag==Tag.INTNUM || childTag==Tag.REALNUM
+                            || childTag==Tag.CHAR_S){
+                        if (childTag==Tag.CHAR_S){
+                            char c = childContent.charAt(0);
+                            int cToi = (int)c;
+                            children[i]=String.valueOf(cToi);
+                        }else {
+                            children[i]=childContent;
+                        }
+                    }else if (childTag==Tag.ID){
+                        if (checkID(root.getChildAt(i),level)){
+                            if (root.getChildAt(i).getChildCount()!=0){
+                                String arrStr = array_analyze(root.getChildAt(i).getChildAt(0),
+                                        table.getAllLevel(childContent,level).getArraySize());
+                                if (arrStr!=null)
+                                    childContent+="@"+arrStr;
+                                else return false;
+                            }
+                            Symbol symbol = table.getAllLevel(childContent,level);
+                            if (symbol.getTag()==Tag.CHAR){
+                                char c = symbol.getCharValue().charAt(0);
+                                int cToi = (int)c;
+                                children[i]=String.valueOf(cToi);
+                            }else if (symbol.getTag()==Tag.INT){
+                                children[i]=symbol.getIntValue();
+                            }else
+                                children[i]=symbol.getRealValue();
+                        }else
+                            return false;
+                    }else if (childTag==Tag.ADD || childTag==Tag.SUB
+                            ||childTag==Tag.MUL || childTag==Tag.DIVIDE){
+                        String exp = expression_analyze(root.getChildAt(i));
+                        if (exp!=null)
+                            children[i]=exp;
+                        else
+                            return false;
+                    }
+                }
+        }else if (tag == Tag.AND || tag == Tag.OR){
+            String[] children = new String[2];
+            for (int i=0;i<root.getChildCount();i++) {
+                int childTag = root.getChildAt(i).getTag();
+                String childContent = root.getChildAt(i).getContent();
+                //Todo 或与的递归，比较运算符，children不能为char real 整型只能为0,1
+
+            }
+        }
         return false;
     }
 
@@ -136,10 +214,21 @@ public class Semantic {
             return false;
         }else {
             if (root.getChildCount()!=0){
-
+                //数组
+                String arrayStr = array_analyze(root.getChildAt(0),
+                        table.getAllLevel(id,level).getArraySize());
+                if (arrayStr!=null)
+                    id+="@"+arrayStr;
+                else return false;
             }
+            Symbol symbol = table.getAllLevel(id,level);
+            if (symbol.getIntValue().equals("") && symbol.getRealValue().equals("")
+                && symbol.getCharValue().equals("") && symbol.getStringValue().equals("")){
+                setError("变量"+id+"在使用前未初始化",root.getLineNum());
+                return false;
+            }else
+                return true;
         }
-        return false;
     }
 
     /**
@@ -187,7 +276,25 @@ public class Semantic {
             }
         }else if (root.getTag()==Tag.ADD || root.getTag()==Tag.SUB
                 || root.getTag()==Tag.MUL || root.getTag()==Tag.DIVIDE){
-            //todo expression()
+            String arrayIndex = expression_analyze(root);
+            if (arrayIndex !=null){
+               if (isInteger(arrayIndex)){
+                   int index = Integer.parseInt(arrayIndex);
+                   if (index>-1 && index<arraySize)
+                       return  arrayIndex;
+                   else if (index < 0){
+                       setError("数组下标不能为负数",root.getLineNum());
+                       return null;
+                   }else{
+                       setError("数组越界",root.getLineNum());
+                       return null;
+                   }
+               }else {
+                   setError("类型不匹配，数组下标必须为整数",root.getLineNum());
+                   return null;
+               }
+            }else
+                return null;
         }
         return null;
     }
@@ -237,7 +344,8 @@ public class Semantic {
                         children[i]=symbol.getRealValue();
                         isInt=false;
                     }else if (symbol.getTag()==Tag.CHAR){
-                        char c = symbol.getCharValue();
+                        String s = symbol.getCharValue();
+                        char c = s.charAt(0);
                         int cToi = (int)c;
                         children[i]=String.valueOf(cToi);
                     }
@@ -270,7 +378,8 @@ public class Semantic {
                     return null;
                 }else
                     return String.valueOf(child1/child2);
-            }
+            }else
+                return null;
         }else {
             BigDecimal bg1 = new BigDecimal(children[0]);
             BigDecimal bg2 = new BigDecimal(children[1]);
@@ -287,8 +396,8 @@ public class Semantic {
                     setError("除数不能为0",root.getLineNum());
                     return null;
                 }
-            }
+            }else
+                return null;
         }
-        return "";
     }
 }

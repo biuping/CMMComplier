@@ -22,6 +22,7 @@ public class neee {
 
         String s = "2";
         String  a ="c";
+
         char n = 'f';
         int i =2222;
         double f =3.2;
@@ -29,9 +30,9 @@ public class neee {
         Object[] o = new Object[2];
         o[0]=i;
         o[1]=n;
-        char d='z';
+        char d=s.charAt(0);
         double e = f*n;
         boolean b =isInteger(s);
-        System.out.println();
+        System.out.println((int)d);
     }
 }
