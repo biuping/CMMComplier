@@ -20,9 +20,18 @@ public class neee {
 
     public static void main(String args[]){
 
-        String s = "0002";
+        String s = "2";
+        String  a ="c";
+        char n = 'f';
+        int i =2222;
+        double f =3.2;
+        n=a.charAt(0);
+        Object[] o = new Object[2];
+        o[0]=i;
+        o[1]=n;
+        char d='z';
+        double e = f*n;
         boolean b =isInteger(s);
-        if (b)
-            System.out.println(Integer.parseInt(s));
+        System.out.println();
     }
 }

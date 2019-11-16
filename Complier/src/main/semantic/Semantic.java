@@ -3,6 +3,7 @@ package main.semantic;
 import main.lexer.Tag;
 import main.parse.TreeNode;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 
 public class Semantic {
@@ -189,5 +190,105 @@ public class Semantic {
             //todo expression()
         }
         return null;
+    }
+
+    /**
+     * 分析表达式
+     *
+     * @param root
+     * 表达式根节点
+     * @return 返回计算结果
+     */
+    private String expression_analyze(TreeNode root){
+        boolean isInt = true;
+//        String content = root.getContent();
+        int rootTag = root.getTag();
+        String[] children = new String[2];
+        for (int i=0;i<root.getChildCount();i++){
+            TreeNode temp = root.getChildAt(i);
+            int tag = temp.getTag();
+            String tempContent = temp.getContent();
+            if (tag==Tag.INTNUM){
+                children[i]=tempContent;
+            }
+            else if (tag==Tag.REALNUM){
+                children[i]=tempContent;
+                isInt=false;
+            }else if (tag==Tag.CHAR_S){
+                //将char转成int计算,int要转成string才能存入children数组
+                char c = tempContent.charAt(0);
+                int cToi = (int)c;
+                children[i]=String.valueOf(cToi);
+            }else if (tag==Tag.ID){
+                if (checkID(temp,level)){
+                    if (temp.getChildCount() != 0) {
+                        String s = array_analyze(temp.getChildAt(0), table
+                                .getAllLevel(tempContent, level)
+                                .getArraySize());
+                        if (s != null)
+                            tempContent += "@" + s;
+                        else
+                            return null;
+                    }
+                    Symbol symbol = table.getAllLevel(temp.getContent(),level);
+                    if (symbol.getTag()==Tag.INT)
+                        children[i]=symbol.getIntValue();
+                    else if (symbol.getTag()==Tag.REAL){
+                        children[i]=symbol.getRealValue();
+                        isInt=false;
+                    }else if (symbol.getTag()==Tag.CHAR){
+                        char c = symbol.getCharValue();
+                        int cToi = (int)c;
+                        children[i]=String.valueOf(cToi);
+                    }
+                }else{
+                    return null;
+                }
+            }else if (root.getTag()==Tag.ADD || root.getTag()==Tag.SUB
+                    || root.getTag()==Tag.MUL || root.getTag()==Tag.DIVIDE){
+                String exp = expression_analyze(root.getChildAt(i));
+                if (exp!=null){
+                    children[i]=exp;
+                    if (isReal(exp))
+                        isInt=false;
+                }else
+                    return null;
+            }
+        }
+        if (isInt){
+            int child1 = Integer.parseInt(children[0]);
+            int child2 = Integer.parseInt(children[1]);
+            if (rootTag==Tag.ADD)
+                return String.valueOf(child1+child2);
+            else if (rootTag==Tag.SUB)
+                return String.valueOf(child1-child2);
+            else if (rootTag==Tag.MUL)
+                return String.valueOf(child1*child2);
+            else if (rootTag==Tag.DIVIDE){
+                if (child2==0){
+                    setError("除数不能为0",root.getLineNum());
+                    return null;
+                }else
+                    return String.valueOf(child1/child2);
+            }
+        }else {
+            BigDecimal bg1 = new BigDecimal(children[0]);
+            BigDecimal bg2 = new BigDecimal(children[1]);
+            if (rootTag==Tag.ADD)
+                return String.valueOf(bg1.add(bg2));
+            else if (rootTag==Tag.SUB)
+                return String.valueOf(bg1.subtract(bg2));
+            else if (rootTag==Tag.MUL)
+                return String.valueOf(bg1.multiply(bg2));
+            else if (rootTag==Tag.DIVIDE){
+                try {
+                    return String.valueOf(bg1.divide(bg2));
+                } catch (ArithmeticException e) {
+                    setError("除数不能为0",root.getLineNum());
+                    return null;
+                }
+            }
+        }
+        return "";
     }
 }
