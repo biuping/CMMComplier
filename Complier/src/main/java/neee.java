@@ -18,6 +18,10 @@ public class neee {
             return false;
     }
 
+    public static void change(String  a){
+        a="2323x";
+    }
+
     public static void main(String args[]){
 
         String s = "2";
@@ -26,6 +30,8 @@ public class neee {
         char n = 'f';
         int i =2222;
         double f =3.2;
+        a=a+f;
+        int dd[]={2,3};
         n=a.charAt(0);
         Object[] o = new Object[2];
         o[0]=i;
@@ -33,6 +39,7 @@ public class neee {
         char d=s.charAt(0);
         double e = f*n;
         boolean b =isInteger(s);
-        System.out.println((int)d);
+        change(a);
+        System.out.println(a);
     }
 }
