@@ -1,5 +1,7 @@
 package main.lexer;
 
+import main.parse.PError;
+
 import java.io.BufferedReader;
 import java.util.ArrayList;
 
@@ -10,6 +12,7 @@ public class Lexer {
     private static boolean isPositive = false;
     private static boolean isNegative = false;
     private boolean isChar = false;
+    private boolean isString = false;
     // 分析后得到的tokens集合，用于其后的语法及语义分析
     private ArrayList<Token> tokens = new ArrayList<Token>();
     // 读取CMM文件文本
@@ -87,7 +90,8 @@ public class Lexer {
     private static boolean isKey(String s){
         if (s.equals("if")||s.equals("else") ||s.equals("int")||s.equals("scan")||
                 s.equals("real")||s.equals("break")||s.equals("while")||s.equals("for")
-                ||s.equals("print")||s.equals("char")||s.equals("continue")){
+                ||s.equals("print")||s.equals("char")||s.equals("continue")
+                ||s.equals("bool")||s.equals("string")||s.equals("true")||s.equals("false")){
             return true;
         }else {
             return false;
@@ -226,14 +230,21 @@ public class Lexer {
                                 isChar=true;
                                 begin=index;
                                 flag=9;
-                            }else if (c=='\"'){
+                            }else if (c=='"' && !isString){
                                 isChar=true;
-                                begin=index;
+                                Token token = new Token(Tag.SEPARATOR,"\"",lineNum,index+1);
+                                tokens.add(token);
+                                begin=index+1;
                                 flag=11;
                             }else if (c=='&'){
                                 flag=12;
                             }else if (c=='|'){
                                 flag=13;
+                            }else if (c=='"' && isString){
+                                begin=index+1;
+                                flag=14;
+                                Token token = new Token(Tag.SEPARATOR,"\"",lineNum,index+1);
+                                tokens.add(token);
                             }
                             else {
                                 flag=0;
@@ -290,6 +301,23 @@ public class Lexer {
                                             break;
                                         case "for":
                                             token = new Token(Tag.FOR, str,lineNum,index-str.length()+1);
+                                            tokens.add(token);
+                                            break;
+                                        case "bool":
+                                            token = new Token(Tag.BOOL, str,lineNum,index-str.length()+1);
+                                            tokens.add(token);
+                                            break;
+                                        case "string":
+                                            isString=true;
+                                            token = new Token(Tag.STRING, str,lineNum,index-str.length()+1);
+                                            tokens.add(token);
+                                            break;
+                                        case "true":
+                                            token = new Token(Tag.TRUE, str,lineNum,index-str.length()+1);
+                                            tokens.add(token);
+                                            break;
+                                        case "false":
+                                            token = new Token(Tag.FALSE, str,lineNum,index-str.length()+1);
                                             tokens.add(token);
                                             break;
                                     }
@@ -523,17 +551,18 @@ public class Lexer {
                                 Error error = new Error(string,"缺少引号",lineNum,begin+1);
                                 errors.add(error);
                                 index=i-1;
-                                flag=0;
                             }else {
                                 char ch = cmmProgram.charAt(i);
                                 if (ch=='"'){
-                                    String str = cmmProgram.substring(begin,i+1);
-                                    Token token_chars=new Token(Tag.STRING,str,lineNum,i+1-str.length());
+                                    String str = cmmProgram.substring(begin,i);
+                                    Token token_chars=new Token(Tag.STR,str,lineNum,i+1-str.length());
                                     tokens.add(token_chars);
-                                    flag=0;
+                                    Token token1 = new Token(Tag.SEPARATOR,"\"",lineNum,i+1);
+                                    tokens.add(token1);
                                     index=i;
                                 }
                             }
+                            flag=0;
                             break;
                         case 12:
                             if (c=='&'){
@@ -563,6 +592,24 @@ public class Lexer {
                                 flag=0;
                             }
                             break;
+                        case 14:
+                            int si = jump_string(begin,cmmProgram);
+                            if (si<cmmProgram.length()){
+                                index=si;
+                                String string = cmmProgram.substring(begin,index);
+                                Token token = new Token(Tag.STR,string,lineNum,begin);
+                                tokens.add(token);
+                                Token token1 = new Token(Tag.SEPARATOR,"\"",lineNum,index+1);
+                                tokens.add(token1);
+                            }else if (si==cmmProgram.length()+1){
+                                index = cmmProgram.length();
+                                String  string = cmmProgram.substring(begin,index);
+                                Error error = new Error(string,"缺少引号",lineNum,begin+1);
+                                errors.add(error);
+                            }
+                            flag=0;
+                            isString=false;
+                            break;
                     }
 
                 }else {
@@ -571,9 +618,9 @@ public class Lexer {
                             || c == '?' || c == '。' || c == '“'|| c == '~'
                             || c == '$' || c == '；' || c == '【'|| c == '#'
                             || c == '】' || c == '，'|| c == '@' || c == '!'
-                            || c == '”' || c == '‘'|| c == '&' || c == '%'
+                            || c == '”' || c == '‘'|| c == '%'
                             || c == '’' || c == '？' || c == '（' || c == '）'
-                            || c == '·'|| c == '`' || c == '|' ){
+                            || c == '·'|| c == '`'){
                         Error error = new Error(String.valueOf(c),"是不可识别符号",lineNum,index+1);
                         errors.add(error);
                     }

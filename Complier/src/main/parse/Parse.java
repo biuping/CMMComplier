@@ -111,8 +111,9 @@ public class Parse {
     private TreeNode statement(){
         TreeNode temp = null;
         //int real char声明语句
-        if (currentToken!=null && (currentToken.getTag()==Tag.INT || currentToken.getTag()==Tag.REAL
-                || currentToken.getTag()==Tag.CHAR)){
+        if (currentToken!=null && (currentToken.getTag()==Tag.INT
+                || currentToken.getTag()==Tag.REAL ||currentToken.getTag()==Tag.BOOL
+                || currentToken.getTag()==Tag.CHAR || currentToken.getTag()==Tag.STRING)){
             temp=declare(false);
         }
         //大括号代码块
@@ -154,7 +155,7 @@ public class Parse {
                 temp=conditionTop();
             }
         }else if (currentToken!=null && (currentToken.getTag()==Tag.INTNUM||currentToken.getTag()==Tag.CHAR_S||
-                currentToken.getTag()==Tag.REALNUM || currentToken.getTag()==Tag.STRING)){
+                currentToken.getTag()==Tag.REALNUM || currentToken.getTag()==Tag.STR)){
             temp=conditionTop();
         }
         //break
@@ -807,9 +808,12 @@ public class Parse {
                     currentToken.getContent().equals("{")){
                     nextToken();
                     assignNode.add(arrayDeclare());
-                }else if (currentToken != null && currentToken.getTag()==Tag.STRING && isChar){
+                }else if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR
+                        && currentToken.getContent().equals("\"") && isChar){
                     //char数组 字符串声明方式
+                    nextToken();
                     assignNode.add(new TreeNode("字符串",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum()));
+                    nextToken();
                 }
                 else {
                     PError error = setError("数组声明缺少左大括号\"{\"");
@@ -1055,8 +1059,18 @@ public class Parse {
                     && currentToken.getContent().equals("[")){
                 temp.add(array());
             }
-        }else if (currentToken!=null && currentToken.getTag()==Tag.STRING){
+        }else if (currentToken !=null && currentToken.getTag()==Tag.TRUE){
+            temp = new TreeNode("布尔值", "true",currentToken.getTag(), currentToken.getLineNum());
+            nextToken();
+        }else if (currentToken !=null && currentToken.getTag()==Tag.FALSE){
+            temp = new TreeNode("布尔值", "false",currentToken.getTag(), currentToken.getLineNum());
+            nextToken();
+        }else if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR
+                && currentToken.getContent().equals("\"")){
+            nextToken();
             temp = new TreeNode("字符串",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
+            //下一个双引号
+            nextToken();
             nextToken();
         }
         else if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("(")){
@@ -1109,9 +1123,7 @@ public class Parse {
         if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("]")){
             temp = new TreeNode("undefined","Undefined",4,currentToken.getLineNum());
             nextToken();
-        }
-
-        else {
+        } else {
             //分析中括号中的表达式
             temp = expression();
             //检测右中括号
@@ -1202,7 +1214,8 @@ public class Parse {
         else if (currentToken != null && currentToken.getTag()==Tag.BAND){
             temp = new TreeNode("运算符", "&",currentToken.getTag(), currentToken.getLineNum());
             nextToken();
-        }else {
+        }
+        else {
             PError error = setError("无法识别符号");
             return new TreeNode("Error"+errorCount,error.toString());
         }

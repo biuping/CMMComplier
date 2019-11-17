@@ -17,6 +17,8 @@ public class Symbol {
     private String charValue;
     // 字符串
     private String stringValue;
+    // bool
+    private String boolValue;
     // 是否为数组,0表示不是,正整数表示数组的大小
     private int arraySize;
 
@@ -30,6 +32,7 @@ public class Symbol {
         this.stringValue = "";
         this.arraySize = 0;
         this.charValue = "";
+        this.boolValue = "";
     }
 
     public String getName() {
@@ -111,5 +114,12 @@ public class Symbol {
     public boolean equals(Object object) {
         Symbol element = (Symbol)object;
         return this.toString().equals(element.toString());
+    }
+    public String getBoolValue() {
+        return boolValue;
+    }
+
+    public void setBoolValue(String boolValue) {
+        this.boolValue = boolValue;
     }
 }
