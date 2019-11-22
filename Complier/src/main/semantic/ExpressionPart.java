@@ -1,5 +1,7 @@
 package main.semantic;
 
+import main.lexer.Tag;
+
 public class ExpressionPart {
     private String[] children=new String[2];
     private String result;
@@ -11,6 +13,15 @@ public class ExpressionPart {
         result="";
         isInt=true;
         isString=false;
+    }
+
+    public int getTag(){
+        if (isString)
+            return Tag.STRING;
+        else if (isInt)
+            return Tag.INT;
+        else
+            return Tag.REAL;
     }
 
     public ExpressionPart(String child1, String child2){

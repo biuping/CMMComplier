@@ -1090,10 +1090,12 @@ public class Parse {
             temp=scan_sta(true);
         }
         //匹配字符
-        else if (currentToken != null && currentToken.getTag()==Tag.CHAR_S){
+        else if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR
+                && currentToken.getContent().equals("'")){
+            nextToken();
             temp=new TreeNode("字符",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
             nextToken();
-
+            nextToken();
         }else {
             PError error = setError("表达式因子出现错误或为空");
             if (currentToken != null &&

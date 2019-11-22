@@ -48,6 +48,23 @@ public class Semantic {
             return false;
     }
 
+    private int judgeTag(int t1,int t2){
+        if (t1==Tag.STRING || t2==Tag.STRING)
+            return Tag.STRING;
+        else if (t1==Tag.REAL || t2==Tag.REAL)
+            return Tag.REAL;
+        else
+            return Tag.INT;
+    }
+
+    private boolean isEsc_char(String s){
+        if (s.equals("\\\"")||s.equals("\\\'")||s.equals("\\n")||s.equals("\\t")
+                ||s.equals("\\r")||s.equals("\\\\"))
+            return true;
+        else
+            return false;
+    }
+
     //输入赋值
     public synchronized void setInput(String input) {
         this.input = input;
@@ -90,7 +107,7 @@ public class Semantic {
 
             }else if (tag==Tag.INT || tag==Tag.REAL
                 ||tag==Tag.CHAR || tag==Tag.STRING || tag==Tag.BOOL){
-
+                declare_analyze(currentNode);
             }
         }
     }
@@ -113,7 +130,6 @@ public class Semantic {
      * 不是指根节点而是if树节点
      */
     private void declare_analyze(TreeNode root){
-        String content = root.getContent();
         int tag = root.getTag();
         int index = 0;
         while (index<root.getChildCount()){
@@ -128,203 +144,11 @@ public class Semantic {
                             && root.getChildAt(index).getTag()==Tag.ASSIGN){
                         TreeNode valueNode = root.getChildAt(index).getChildAt(0);
                         String value = valueNode.getContent();
-                        if (tag==Tag.INT){ //int 变量
-                            if(valueNode.getTag()==Tag.INTNUM){
-                                symbol.setIntValue(value);
-                                symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
-                            }else if (valueNode.getTag()==Tag.REAL){
-                                setError("不能将real数值赋值给int型变量",valueNode.getLineNum());
-                            }else if (valueNode.getTag()==Tag.CHAR_S)
-                                setError("不能将char字符赋值给int型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.STR)
-                                setError("不能将string字符串赋值给int型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
-                                setError("不能将布尔值赋值给int型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.ID){
-                                if (checkID(valueNode,level)){
-                                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
-                                    if (idSymbol.getTag() ==Tag.INT){
-                                        symbol.setIntValue(idSymbol.getIntValue());
-                                        symbol.setRealValue(String.
-                                                valueOf(Double.parseDouble(idSymbol.getIntValue())));
-                                    }else if (idSymbol.getTag()==Tag.REAL)
-                                        setError("不能将real数值赋值给int型变量",valueNode.getLineNum());
-                                    else if (idSymbol.getTag()==Tag.CHAR)
-                                        setError("不能将char字符赋值给int型变量",valueNode.getLineNum());
-                                    else if (idSymbol.getTag()==Tag.STRING)
-                                        setError("不能将string字符串赋值给int型变量",valueNode.getLineNum());
-                                    else if (idSymbol.getTag()==Tag.BOOL)
-                                        setError("不能将布尔值赋值给int型变量",valueNode.getLineNum());
-                                }else
-                                    return;
-                            }else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
-                                    ||valueNode.getTag()==Tag.MUL || valueNode.getTag()==Tag.DIVIDE){
-                                ExpressionPart part = expression_analyze(valueNode);
-                                String result = part.getResult();
-                                if (result!=null){
-                                    if (isInteger(result) && part.isInt()){
-                                        symbol.setIntValue(result);
-                                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
-                                    }else if (isReal(result) && !part.isString()){
-                                        setError("不能将real数值赋值给int型变量",valueNode.getLineNum());
-                                        return;
-                                    }else if (part.isString()){
-                                        setError("不能将字符串赋值给int型变量",valueNode.getLineNum());
-                                        return;
-                                    }
-                                    else
-                                        return;
-                                }
-                            }
-                        }else if (tag==Tag.REAL){  //real 声明
-                            if(valueNode.getTag()==Tag.INTNUM){
-                                symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
-                            }else if (valueNode.getTag()==Tag.REAL){
-                                symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
-                            }else if (valueNode.getTag()==Tag.CHAR_S)
-                                setError("不能将char字符赋值给real型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.STR)
-                                setError("不能将string字符串赋值给real型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
-                                setError("不能将布尔值赋值给real型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.ID){
-                                if (checkID(valueNode,level)){
-                                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
-                                    if (idSymbol.getTag() ==Tag.INT ||idSymbol.getTag()==Tag.REAL){
-                                        symbol.setRealValue(String.
-                                                valueOf(Double.parseDouble(idSymbol.getRealValue())));
-                                    }
-                                    else if (idSymbol.getTag()==Tag.CHAR)
-                                        setError("不能将char字符赋值给real型变量",valueNode.getLineNum());
-                                    else if (idSymbol.getTag()==Tag.STRING)
-                                        setError("不能将string字符串赋值给real型变量",valueNode.getLineNum());
-                                    else if (idSymbol.getTag()==Tag.BOOL)
-                                        setError("不能将布尔值赋值给real型变量",valueNode.getLineNum());
-                                }else
-                                    return;
-                            }else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
-                                    ||valueNode.getTag()==Tag.MUL || valueNode.getTag()==Tag.DIVIDE){
-                                ExpressionPart part = expression_analyze(valueNode);
-                                String result = part.getResult();
-                                if (result!=null){
-                                    if (isInteger(result) && part.isInt()){
-                                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
-                                    }else if (isReal(result) && !part.isString()){
-                                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
-                                    }
-                                    else if (part.isString()){
-                                        setError("不能将字符串赋值给real型变量",valueNode.getLineNum());
-                                        return;
-                                    }else
-                                        return;
-                                }
-                            }
-                        }else if (tag==Tag.CHAR){  //real 声明
-                            if(valueNode.getTag()==Tag.INTNUM){
-                                setError("不能将int数值赋值给char型变量",valueNode.getLineNum());
-                            }else if (valueNode.getTag()==Tag.REAL){
-                                setError("不能将real数值赋值给char型变量",valueNode.getLineNum());
-                            }else if (valueNode.getTag()==Tag.CHAR_S)
-                                symbol.setCharValue(value);
-                            else if (valueNode.getTag()==Tag.STR)
-                                setError("不能将string字符串赋值给char型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
-                                setError("不能将布尔值赋值给char型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.ID){
-                                if (checkID(valueNode,level)){
-                                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
-                                    if (idSymbol.getTag() ==Tag.INT ){
-                                        setError("不能将int型变量赋值给char型变量",valueNode.getLineNum());
-                                    }else if (idSymbol.getTag()==Tag.REAL){
-                                        setError("不能将real型变量字符赋值给char型变量",valueNode.getLineNum());
-                                    }
-                                    else if (idSymbol.getTag()==Tag.CHAR)
-                                        symbol.setCharValue(idSymbol.getCharValue());
-                                    else if (idSymbol.getTag()==Tag.STRING)
-                                        setError("不能将string变量赋值给char型变量",valueNode.getLineNum());
-                                    else if (idSymbol.getTag()==Tag.BOOL)
-                                        setError("不能将布尔型变量赋值给char型变量",valueNode.getLineNum());
-                                }else
-                                    return;
-                            }else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
-                                    ||valueNode.getTag()==Tag.MUL || valueNode.getTag()==Tag.DIVIDE){
-                                setError("不能将算术表达式赋值给char型变量",valueNode.getLineNum());
-                            }
-                        }else if (tag==Tag.STRING){  //real 声明
-                            if(valueNode.getTag()==Tag.INTNUM){
-                                setError("不能将int数值赋值给string型变量",valueNode.getLineNum());
-                            }else if (valueNode.getTag()==Tag.REAL){
-                                setError("不能将real数值赋值给string型变量",valueNode.getLineNum());
-                            }else if (valueNode.getTag()==Tag.CHAR_S)
-                                setError("不能将char字符赋值给string型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.STR)
-                                symbol.setStringValue(value);
-                            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
-                                setError("不能将布尔值赋值给string型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.ID){
-                                if (checkID(valueNode,level)){
-                                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
-                                    if (idSymbol.getTag() ==Tag.INT ){
-                                        setError("不能将int型变量赋值给string型变量",valueNode.getLineNum());
-                                    }else if (idSymbol.getTag()==Tag.REAL){
-                                        setError("不能将real型变量赋值给string型变量",valueNode.getLineNum());
-                                    }
-                                    else if (idSymbol.getTag()==Tag.CHAR)
-                                        setError("不能将char变量赋值给string型变量",valueNode.getLineNum());
-                                    else if (idSymbol.getTag()==Tag.STRING)
-                                        symbol.setStringValue(idSymbol.getStringValue());
-                                    else if (idSymbol.getTag()==Tag.BOOL)
-                                        setError("不能将布尔型变量赋值给string型变量",valueNode.getLineNum());
-                                }else
-                                    return;
-                            }else if (valueNode.getTag()==Tag.ADD ){
-                                ExpressionPart part = expression_analyze(valueNode);
-                                symbol.setStringValue(part.getResult());
-                            }else {
-                                setError("除加法之外的算术表达式不能赋值给string型变量",valueNode.getLineNum());
-                            }
-                        }else if (tag == Tag.BOOL){
-                            if(valueNode.getTag()==Tag.INTNUM){
-                                setError("不能将int数值赋值给布尔型变量",valueNode.getLineNum());
-                            }else if (valueNode.getTag()==Tag.REAL){
-                                setError("不能将real数值赋值给布尔型变量",valueNode.getLineNum());
-                            }else if (valueNode.getTag()==Tag.CHAR_S)
-                                setError("不能将char字符赋值给布尔型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.STR)
-                                setError("不能将string字符串赋值给布尔型变量",valueNode.getLineNum());
-                            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
-                                symbol.setBoolValue(value);
-                            else if (valueNode.getTag()==Tag.ID){
-                                if (checkID(valueNode,level)){
-                                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
-                                    if (idSymbol.getTag() ==Tag.INT ){
-                                        setError("不能将int型变量赋值给布尔型变量",valueNode.getLineNum());
-                                    }else if (idSymbol.getTag()==Tag.REAL){
-                                        setError("不能将real型变量赋值给布尔型变量",valueNode.getLineNum());
-                                    }
-                                    else if (idSymbol.getTag()==Tag.CHAR)
-                                        setError("不能将char字符赋值给布尔型变量",valueNode.getLineNum());
-                                    else if (idSymbol.getTag()==Tag.STRING)
-                                        setError("不能将string变量赋值给布尔型变量",valueNode.getLineNum());
-                                    else if (idSymbol.getTag()==Tag.BOOL)
-                                        symbol.setBoolValue(idSymbol.getBoolValue());
-                                }else
-                                    return;
-                            }else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
-                                    ||valueNode.getTag()==Tag.MUL || valueNode.getTag()==Tag.DIVIDE){
-                                setError("不能将算术表达式赋值给布尔型变量",valueNode.getLineNum());
-                            }else if (valueNode.getTag()==Tag.EQ || valueNode.getTag()==Tag.UE
-                                    || valueNode.getTag()==Tag.GE || valueNode.getTag()==Tag.LE
-                                    || valueNode.getTag()==Tag.LESS || valueNode.getTag()==Tag.GREATER
-                                    || valueNode.getTag()==Tag.AND || valueNode.getTag()==Tag.OR){
-                                boolean result = condition_analyze(valueNode);
-                                if (result)
-                                    symbol.setBoolValue("true");
-                                else
-                                    symbol.setBoolValue("false");
-                            }
-                        }
-                        index++;
+                        String judge = declare_sub(tag,valueNode,symbol,value);
+                        if (judge==null)
+                            return;
+                        else
+                            index++;
                     }
                     table.addSymbol(symbol);
                 }else {
@@ -391,202 +215,11 @@ public class Semantic {
                                     Symbol itemSymbol = new Symbol(itemName,item.getTag(),
                                             items.getLineNum(),level);
                                     String value = item.getContent();
-                                    if (tag==Tag.INT){ //int 变量
-                                        if(item.getTag()==Tag.INTNUM){
-                                            itemSymbol.setIntValue(value);
-                                            itemSymbol.setRealValue(String.valueOf(Double.parseDouble(value)));
-                                        }else if (item.getTag()==Tag.REAL){
-                                            setError("不能将real数值赋值给int型变量",item.getLineNum());
-                                        }else if (item.getTag()==Tag.CHAR_S)
-                                            setError("不能将char字符赋值给int型变量",item.getLineNum());
-                                        else if (item.getTag()==Tag.STR)
-                                            setError("不能将string字符串赋值给int型变量",item.getLineNum());
-                                        else if (item.getTag()==Tag.TRUE || item.getTag()==Tag.FALSE)
-                                            setError("不能将布尔值赋值给int型变量",item.getLineNum());
-                                        else if (item.getTag()==Tag.ID){
-                                            if (checkID(item,level)){
-                                                Symbol idSymbol = table.getAllLevel(item.getContent(),level);
-                                                if (idSymbol.getTag() ==Tag.INT){
-                                                    itemSymbol.setIntValue(idSymbol.getIntValue());
-                                                    itemSymbol.setRealValue(String.
-                                                            valueOf(Double.parseDouble(idSymbol.getIntValue())));
-                                                }else if (idSymbol.getTag()==Tag.REAL)
-                                                    setError("不能将real数值赋值给int型变量",item.getLineNum());
-                                                else if (idSymbol.getTag()==Tag.CHAR)
-                                                    setError("不能将char字符赋值给int型变量",item.getLineNum());
-                                                else if (idSymbol.getTag()==Tag.STRING)
-                                                    setError("不能将string字符串赋值给int型变量",item.getLineNum());
-                                                else if (idSymbol.getTag()==Tag.BOOL)
-                                                    setError("不能将布尔值赋值给int型变量",item.getLineNum());
-                                            }else
-                                                return;
-                                        }else if (item.getTag()==Tag.ADD || item.getTag()==Tag.SUB
-                                                ||item.getTag()==Tag.MUL || item.getTag()==Tag.DIVIDE){
-                                            ExpressionPart part = expression_analyze(item);
-                                            String result = part.getResult();
-                                            if (result!=null){
-                                                if (isInteger(result) && part.isInt()){
-                                                    itemSymbol.setIntValue(result);
-                                                    itemSymbol.setRealValue(String.valueOf(Double.parseDouble(result)));
-                                                }else if (isReal(result) && !part.isString()){
-                                                    setError("不能将real数值赋值给int型变量",item.getLineNum());
-                                                    return;
-                                                }else if (part.isString()){
-                                                    setError("不能将字符串赋值给int型变量",item.getLineNum());
-                                                    return;
-                                                }
-                                                else
-                                                    return;
-                                            }
-                                        }
-                                    }else if (tag==Tag.REAL){  //real 声明
-                                        if(item.getTag()==Tag.INTNUM){
-                                            itemSymbol.setRealValue(String.valueOf(Double.parseDouble(value)));
-                                        }else if (item.getTag()==Tag.REAL){
-                                            itemSymbol.setRealValue(String.valueOf(Double.parseDouble(value)));
-                                        }else if (item.getTag()==Tag.CHAR_S)
-                                            setError("不能将char字符赋值给real型变量",item.getLineNum());
-                                        else if (item.getTag()==Tag.STR)
-                                            setError("不能将string字符串赋值给real型变量",item.getLineNum());
-                                        else if (item.getTag()==Tag.TRUE || item.getTag()==Tag.FALSE)
-                                            setError("不能将布尔值赋值给real型变量",item.getLineNum());
-                                        else if (item.getTag()==Tag.ID){
-                                            if (checkID(item,level)){
-                                                Symbol idSymbol = table.getAllLevel(item.getContent(),level);
-                                                if (idSymbol.getTag() ==Tag.INT ||idSymbol.getTag()==Tag.REAL){
-                                                    itemSymbol.setRealValue(String.
-                                                            valueOf(Double.parseDouble(idSymbol.getRealValue())));
-                                                }
-                                                else if (idSymbol.getTag()==Tag.CHAR)
-                                                    setError("不能将char字符赋值给real型变量",item.getLineNum());
-                                                else if (idSymbol.getTag()==Tag.STRING)
-                                                    setError("不能将string字符串赋值给real型变量",item.getLineNum());
-                                                else if (idSymbol.getTag()==Tag.BOOL)
-                                                    setError("不能将布尔值赋值给real型变量",item.getLineNum());
-                                            }else
-                                                return;
-                                        }else if (item.getTag()==Tag.ADD || item.getTag()==Tag.SUB
-                                                ||item.getTag()==Tag.MUL || item.getTag()==Tag.DIVIDE){
-                                            ExpressionPart part = expression_analyze(item);
-                                            String result = part.getResult();
-                                            if (result!=null){
-                                                if (isInteger(result) && part.isInt()){
-                                                    itemSymbol.setRealValue(String.valueOf(Double.parseDouble(result)));
-                                                }else if (isReal(result) && !part.isString()){
-                                                    itemSymbol.setRealValue(String.valueOf(Double.parseDouble(result)));
-                                                }
-                                                else if (part.isString()){
-                                                    setError("不能将字符串赋值给real型变量",item.getLineNum());
-                                                    return;
-                                                }else
-                                                    return;
-                                            }
-                                        }
-                                    }else if (tag==Tag.CHAR){  //real 声明
-                                        if(item.getTag()==Tag.INTNUM){
-                                            setError("不能将int数值赋值给char型变量",item.getLineNum());
-                                        }else if (item.getTag()==Tag.REAL){
-                                            setError("不能将real数值赋值给char型变量",item.getLineNum());
-                                        }else if (item.getTag()==Tag.CHAR_S)
-                                            itemSymbol.setCharValue(value);
-                                        else if (item.getTag()==Tag.STR)
-                                            setError("不能将string字符串赋值给char型变量",item.getLineNum());
-                                        else if (item.getTag()==Tag.TRUE || item.getTag()==Tag.FALSE)
-                                            setError("不能将布尔值赋值给char型变量",item.getLineNum());
-                                        else if (item.getTag()==Tag.ID){
-                                            if (checkID(item,level)){
-                                                Symbol idSymbol = table.getAllLevel(item.getContent(),level);
-                                                if (idSymbol.getTag() ==Tag.INT ){
-                                                    setError("不能将int型变量赋值给char型变量",item.getLineNum());
-                                                }else if (idSymbol.getTag()==Tag.REAL){
-                                                    setError("不能将real型变量字符赋值给char型变量",item.getLineNum());
-                                                }
-                                                else if (idSymbol.getTag()==Tag.CHAR)
-                                                    itemSymbol.setCharValue(idSymbol.getCharValue());
-                                                else if (idSymbol.getTag()==Tag.STRING)
-                                                    setError("不能将string变量赋值给char型变量",item.getLineNum());
-                                                else if (idSymbol.getTag()==Tag.BOOL)
-                                                    setError("不能将布尔型变量赋值给char型变量",item.getLineNum());
-                                            }else
-                                                return;
-                                        }else if (item.getTag()==Tag.ADD || item.getTag()==Tag.SUB
-                                                ||item.getTag()==Tag.MUL || item.getTag()==Tag.DIVIDE){
-                                            setError("不能将算术表达式赋值给char型变量",item.getLineNum());
-                                        }
-                                    }else if (tag==Tag.STRING){  //real 声明
-                                        if(item.getTag()==Tag.INTNUM){
-                                            setError("不能将int数值赋值给string型变量",item.getLineNum());
-                                        }else if (item.getTag()==Tag.REAL){
-                                            setError("不能将real数值赋值给string型变量",item.getLineNum());
-                                        }else if (item.getTag()==Tag.CHAR_S)
-                                            setError("不能将char字符赋值给string型变量",item.getLineNum());
-                                        else if (item.getTag()==Tag.STR)
-                                            itemSymbol.setStringValue(value);
-                                        else if (item.getTag()==Tag.TRUE || item.getTag()==Tag.FALSE)
-                                            setError("不能将布尔值赋值给string型变量",item.getLineNum());
-                                        else if (item.getTag()==Tag.ID){
-                                            if (checkID(item,level)){
-                                                Symbol idSymbol = table.getAllLevel(item.getContent(),level);
-                                                if (idSymbol.getTag() ==Tag.INT ){
-                                                    setError("不能将int型变量赋值给string型变量",item.getLineNum());
-                                                }else if (idSymbol.getTag()==Tag.REAL){
-                                                    setError("不能将real型变量赋值给string型变量",item.getLineNum());
-                                                }
-                                                else if (idSymbol.getTag()==Tag.CHAR)
-                                                    setError("不能将char变量赋值给string型变量",item.getLineNum());
-                                                else if (idSymbol.getTag()==Tag.STRING)
-                                                    itemSymbol.setStringValue(idSymbol.getStringValue());
-                                                else if (idSymbol.getTag()==Tag.BOOL)
-                                                    setError("不能将布尔型变量赋值给string型变量",item.getLineNum());
-                                            }else
-                                                return;
-                                        }else if (item.getTag()==Tag.ADD ){
-                                            ExpressionPart part = expression_analyze(item);
-                                            itemSymbol.setStringValue(part.getResult());
-                                        }else {
-                                            setError("除加法之外的算术表达式不能赋值给string型变量",item.getLineNum());
-                                        }
-                                    }else if (tag == Tag.BOOL) {
-                                        if (item.getTag() == Tag.INTNUM) {
-                                            setError("不能将int数值赋值给布尔型变量", item.getLineNum());
-                                        } else if (item.getTag() == Tag.REAL) {
-                                            setError("不能将real数值赋值给布尔型变量", item.getLineNum());
-                                        } else if (item.getTag() == Tag.CHAR_S)
-                                            setError("不能将char字符赋值给布尔型变量", item.getLineNum());
-                                        else if (item.getTag() == Tag.STR)
-                                            setError("不能将string字符串赋值给布尔型变量", item.getLineNum());
-                                        else if (item.getTag() == Tag.TRUE || item.getTag() == Tag.FALSE)
-                                            itemSymbol.setBoolValue(value);
-                                        else if (item.getTag() == Tag.ID) {
-                                            if (checkID(item, level)) {
-                                                Symbol idSymbol = table.getAllLevel(item.getContent(), level);
-                                                if (idSymbol.getTag() == Tag.INT) {
-                                                    setError("不能将int型变量赋值给布尔型变量", item.getLineNum());
-                                                } else if (idSymbol.getTag() == Tag.REAL) {
-                                                    setError("不能将real型变量赋值给布尔型变量", item.getLineNum());
-                                                } else if (idSymbol.getTag() == Tag.CHAR)
-                                                    setError("不能将char字符赋值给布尔型变量", item.getLineNum());
-                                                else if (idSymbol.getTag() == Tag.STRING)
-                                                    setError("不能将string变量赋值给布尔型变量", item.getLineNum());
-                                                else if (idSymbol.getTag() == Tag.BOOL)
-                                                    itemSymbol.setBoolValue(idSymbol.getBoolValue());
-                                            } else
-                                                return;
-                                        } else if (item.getTag() == Tag.ADD || item.getTag() == Tag.SUB
-                                                || item.getTag() == Tag.MUL || item.getTag() == Tag.DIVIDE) {
-                                            setError("不能将算术表达式赋值给布尔型变量", item.getLineNum());
-                                        } else if (item.getTag() == Tag.EQ || item.getTag() == Tag.UE
-                                                || item.getTag() == Tag.GE || item.getTag() == Tag.LE
-                                                || item.getTag() == Tag.LESS || item.getTag() == Tag.GREATER
-                                                || item.getTag() == Tag.AND || item.getTag() == Tag.OR) {
-                                            boolean result = condition_analyze(item);
-                                            if (result)
-                                                itemSymbol.setBoolValue("true");
-                                            else
-                                                itemSymbol.setBoolValue("false");
-                                        }
-                                    }
-                                    table.addSymbol(itemSymbol);
+                                    String judge = declare_sub(tag,item,symbol,value);
+                                    if (judge==null)
+                                        return;
+                                    else
+                                        table.addSymbol(itemSymbol);
                                 }
                                 
                             }
@@ -604,6 +237,206 @@ public class Semantic {
         }
     }
 
+    private String declare_sub(int tag,TreeNode valueNode,Symbol symbol,String value){
+        if (tag==Tag.INT){ //int 变量
+            if(valueNode.getTag()==Tag.INTNUM){
+                symbol.setIntValue(value);
+                symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
+            }else if (valueNode.getTag()==Tag.REAL){
+                setError("不能将real数值赋值给int型变量",valueNode.getLineNum());
+            }else if (valueNode.getTag()==Tag.CHAR_S)
+                setError("不能将char字符赋值给int型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.STR)
+                setError("不能将string字符串赋值给int型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
+                setError("不能将布尔值赋值给int型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.ID){
+                if (checkID(valueNode,level)){
+                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
+                    if (idSymbol.getTag() ==Tag.INT){
+                        symbol.setIntValue(idSymbol.getIntValue());
+                        symbol.setRealValue(String.
+                                valueOf(Double.parseDouble(idSymbol.getIntValue())));
+                    }else if (idSymbol.getTag()==Tag.REAL)
+                        setError("不能将real数值赋值给int型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.CHAR)
+                        setError("不能将char字符赋值给int型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.STRING)
+                        setError("不能将string字符串赋值给int型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.BOOL)
+                        setError("不能将布尔值赋值给int型变量",valueNode.getLineNum());
+                }else
+                    return null;
+            }else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
+                    ||valueNode.getTag()==Tag.MUL || valueNode.getTag()==Tag.DIVIDE){
+                ExpressionPart part = expression_analyze(valueNode);
+                String result = part.getResult();
+                if (result!=null){
+                    if (isInteger(result) && part.isInt()){
+                        symbol.setIntValue(result);
+                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
+                    }else if (isReal(result) && !part.isString()){
+                        setError("不能将real数值赋值给int型变量",valueNode.getLineNum());
+                        return null;
+                    }else if (part.isString()){
+                        setError("不能将字符串赋值给int型变量",valueNode.getLineNum());
+                        return null;
+                    }
+                    else
+                        return null;
+                }
+            }
+        }else if (tag==Tag.REAL){  //real 声明
+            if(valueNode.getTag()==Tag.INTNUM){
+                symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
+            }else if (valueNode.getTag()==Tag.REAL){
+                symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
+            }else if (valueNode.getTag()==Tag.CHAR_S)
+                setError("不能将char字符赋值给real型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.STR)
+                setError("不能将string字符串赋值给real型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
+                setError("不能将布尔值赋值给real型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.ID){
+                if (checkID(valueNode,level)){
+                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
+                    if (idSymbol.getTag() ==Tag.INT ||idSymbol.getTag()==Tag.REAL){
+                        symbol.setRealValue(String.
+                                valueOf(Double.parseDouble(idSymbol.getRealValue())));
+                    }
+                    else if (idSymbol.getTag()==Tag.CHAR)
+                        setError("不能将char字符赋值给real型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.STRING)
+                        setError("不能将string字符串赋值给real型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.BOOL)
+                        setError("不能将布尔值赋值给real型变量",valueNode.getLineNum());
+                }else
+                    return null;
+            }else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
+                    ||valueNode.getTag()==Tag.MUL || valueNode.getTag()==Tag.DIVIDE){
+                ExpressionPart part = expression_analyze(valueNode);
+                String result = part.getResult();
+                if (result!=null){
+                    if (isInteger(result) && part.isInt()){
+                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
+                    }else if (isReal(result) && !part.isString()){
+                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
+                    }
+                    else if (part.isString()){
+                        setError("不能将字符串赋值给real型变量",valueNode.getLineNum());
+                        return null;
+                    }else
+                        return null;
+                }
+            }
+        }else if (tag==Tag.CHAR){  //real 声明
+            if(valueNode.getTag()==Tag.INTNUM){
+                setError("不能将int数值赋值给char型变量",valueNode.getLineNum());
+            }else if (valueNode.getTag()==Tag.REAL){
+                setError("不能将real数值赋值给char型变量",valueNode.getLineNum());
+            }else if (valueNode.getTag()==Tag.CHAR_S)
+                symbol.setCharValue(value);
+            else if (valueNode.getTag()==Tag.STR)
+                setError("不能将string字符串赋值给char型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
+                setError("不能将布尔值赋值给char型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.ID){
+                if (checkID(valueNode,level)){
+                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
+                    if (idSymbol.getTag() ==Tag.INT ){
+                        setError("不能将int型变量赋值给char型变量",valueNode.getLineNum());
+                    }else if (idSymbol.getTag()==Tag.REAL){
+                        setError("不能将real型变量字符赋值给char型变量",valueNode.getLineNum());
+                    }
+                    else if (idSymbol.getTag()==Tag.CHAR)
+                        symbol.setCharValue(idSymbol.getCharValue());
+                    else if (idSymbol.getTag()==Tag.STRING)
+                        setError("不能将string变量赋值给char型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.BOOL)
+                        setError("不能将布尔型变量赋值给char型变量",valueNode.getLineNum());
+                }else
+                    return null;
+            }else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
+                    ||valueNode.getTag()==Tag.MUL || valueNode.getTag()==Tag.DIVIDE){
+                setError("不能将算术表达式赋值给char型变量",valueNode.getLineNum());
+            }
+        }else if (tag==Tag.STRING){  //real 声明
+            if(valueNode.getTag()==Tag.INTNUM){
+                setError("不能将int数值赋值给string型变量",valueNode.getLineNum());
+            }else if (valueNode.getTag()==Tag.REAL){
+                setError("不能将real数值赋值给string型变量",valueNode.getLineNum());
+            }else if (valueNode.getTag()==Tag.CHAR_S)
+                setError("不能将char字符赋值给string型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.STR)
+                symbol.setStringValue(value);
+            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
+                setError("不能将布尔值赋值给string型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.ID){
+                if (checkID(valueNode,level)){
+                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
+                    if (idSymbol.getTag() ==Tag.INT ){
+                        setError("不能将int型变量赋值给string型变量",valueNode.getLineNum());
+                    }else if (idSymbol.getTag()==Tag.REAL){
+                        setError("不能将real型变量赋值给string型变量",valueNode.getLineNum());
+                    }
+                    else if (idSymbol.getTag()==Tag.CHAR)
+                        setError("不能将char变量赋值给string型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.STRING)
+                        symbol.setStringValue(idSymbol.getStringValue());
+                    else if (idSymbol.getTag()==Tag.BOOL)
+                        setError("不能将布尔型变量赋值给string型变量",valueNode.getLineNum());
+                }else
+                    return null;
+            }else if (valueNode.getTag()==Tag.ADD ){
+                ExpressionPart part = expression_analyze(valueNode);
+                symbol.setStringValue(part.getResult());
+            }else {
+                setError("除加法之外的算术表达式不能赋值给string型变量",valueNode.getLineNum());
+            }
+        }else if (tag == Tag.BOOL){
+            if(valueNode.getTag()==Tag.INTNUM){
+                setError("不能将int数值赋值给布尔型变量",valueNode.getLineNum());
+            }else if (valueNode.getTag()==Tag.REAL){
+                setError("不能将real数值赋值给布尔型变量",valueNode.getLineNum());
+            }else if (valueNode.getTag()==Tag.CHAR_S)
+                setError("不能将char字符赋值给布尔型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.STR)
+                setError("不能将string字符串赋值给布尔型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
+                symbol.setBoolValue(value);
+            else if (valueNode.getTag()==Tag.ID){
+                if (checkID(valueNode,level)){
+                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
+                    if (idSymbol.getTag() ==Tag.INT ){
+                        setError("不能将int型变量赋值给布尔型变量",valueNode.getLineNum());
+                    }else if (idSymbol.getTag()==Tag.REAL){
+                        setError("不能将real型变量赋值给布尔型变量",valueNode.getLineNum());
+                    }
+                    else if (idSymbol.getTag()==Tag.CHAR)
+                        setError("不能将char字符赋值给布尔型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.STRING)
+                        setError("不能将string变量赋值给布尔型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.BOOL)
+                        symbol.setBoolValue(idSymbol.getBoolValue());
+                }else
+                    return null;
+            }else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
+                    ||valueNode.getTag()==Tag.MUL || valueNode.getTag()==Tag.DIVIDE){
+                setError("不能将算术表达式赋值给布尔型变量",valueNode.getLineNum());
+            }else if (valueNode.getTag()==Tag.EQ || valueNode.getTag()==Tag.UE
+                    || valueNode.getTag()==Tag.GE || valueNode.getTag()==Tag.LE
+                    || valueNode.getTag()==Tag.LESS || valueNode.getTag()==Tag.GREATER
+                    || valueNode.getTag()==Tag.AND || valueNode.getTag()==Tag.OR){
+                boolean result = condition_analyze(valueNode);
+                if (result)
+                    symbol.setBoolValue("true");
+                else
+                    symbol.setBoolValue("false");
+            }
+        }
+        return "";
+    }
+
     /**
      * 分析条件语句
      * @param root
@@ -613,13 +446,18 @@ public class Semantic {
     private boolean condition_analyze(TreeNode root){
         String content = root.getContent();
         int tag = root.getTag();
-        if (isInteger(content)){
-            if (Integer.parseInt(content)==1)
-                return true;
-            else if (Integer.parseInt(content)==0)
-                return false;
+        if (tag==Tag.INTNUM){
+            return Integer.parseInt(content) != 0;
+        }else if (tag==Tag.REALNUM){
+            return !(Double.parseDouble(content) == 0);
+        }else if (tag==Tag.CHAR_S){
+            char c;
+            if (isEsc_char(content))
+                c=content.charAt(1);
             else
-                setError(content+"不能作为判断条件",root.getLineNum());
+                c=content.charAt(0);
+            int i = (int)c;
+            return i != 0;
         }else if (root.getTag()==Tag.TRUE){
             return true;
         }else if (root.getTag()==Tag.FALSE){
@@ -636,44 +474,63 @@ public class Semantic {
                 }
                 Symbol symbol = table.getAllLevel(content,level);
                 if (symbol.getTag()==Tag.BOOL){
-                    if (symbol.getBoolValue().equals("true"))
-                        return true;
-                    else
-                        return false;
+                    return symbol.getBoolValue().equals("true");
                 }
                 else if (symbol.getTag()==Tag.INT){
                     int i = Integer.parseInt(symbol.getIntValue());
-                    if (i==0)
-                        return false;
-                    else if (i==1)
-                        return true;
+                    return i != 0;
+                }else if (symbol.getTag()==Tag.REAL){
+                    double b = Double.parseDouble(symbol.getRealValue());
+                    return !(b == 0);
+                }else if (symbol.getTag()==Tag.CHAR){
+                    char c;
+                    if (isEsc_char(content))
+                        c=content.charAt(1);
                     else
-                        setError(content+"不能作为判断条件",root.getLineNum());
-                } else{
+                        c=content.charAt(0);
+                    int i = (int)c;
+                    return i != 0;
+                }
+                else{
                     setError("不能将变量"+content+"作为判断条件",root.getLineNum());
                 }
             }else return false;
         }else if (tag==Tag.EQ || tag == Tag.LE || tag == Tag.GE || tag == Tag.UE
-                || tag == Tag.LESS || tag == Tag.GREATER){
-                String[] children = new String[2];
+                || tag == Tag.LESS || tag == Tag.GREATER||
+                tag == Tag.AND || tag == Tag.OR){
+                Element[] children=new Element[2] ;
                 for (int i=0;i<root.getChildCount();i++){
                     int childTag = root.getChildAt(i).getTag();
                     String childContent = root.getChildAt(i).getContent();
-                    if (childTag==Tag.OR || childTag==Tag.AND){
+                    if (childTag==Tag.OR || childTag==Tag.AND || childTag==Tag.EQ
+                            || childTag == Tag.LE || childTag == Tag.GE || childTag == Tag.UE
+                            || childTag == Tag.LESS || childTag == Tag.GREATER){
                         if (condition_analyze(root.getChildAt(i)))
-                            children[i]="1";
+                            children[i]=new Element(Tag.INT,"1");
                         else
-                            children[i]="0";
+                            children[i]=new Element(Tag.INT,"0");
+                    }else if (childTag==Tag.TRUE){
+                        children[i]=new Element(Tag.INT,"1");
+                    }else if (childTag==Tag.FALSE){
+                        children[i]=new Element(Tag.INT,"0");
                     }else if (childTag==Tag.INTNUM || childTag==Tag.REALNUM
-                            || childTag==Tag.CHAR_S){
+                            || childTag==Tag.CHAR_S || childTag==Tag.STR){
                         if (childTag==Tag.CHAR_S){
-                            char c = childContent.charAt(0);
+                            char c ;
+                            if (isEsc_char(childContent))
+                                c= childContent.charAt(1);
+                            else
+                                c= childContent.charAt(0);
                             int cToi = (int)c;
-                            children[i]=String.valueOf(cToi);
-                        }else {
-                            children[i]=childContent;
-                        }
-                    }else if (childTag==Tag.ID){
+                            children[i]=new Element(Tag.INT,String.valueOf(cToi));
+                        }else if (childTag==Tag.REALNUM){
+                            children[i]=new Element(Tag.REAL,childContent);
+                        }else if (childTag==Tag.INTNUM)
+                            children[i]=new Element(Tag.INT,childContent);
+                        else
+                            children[i]=new Element(Tag.STRING,childContent);
+                    }
+                    else if (childTag==Tag.ID){
                         if (checkID(root.getChildAt(i),level)){
                             if (root.getChildAt(i).getChildCount()!=0){
                                 String arrStr = array_analyze(root.getChildAt(i).getChildAt(0),
@@ -686,40 +543,50 @@ public class Semantic {
                             if (symbol.getTag()==Tag.CHAR){
                                 char c = symbol.getCharValue().charAt(0);
                                 int cToi = (int)c;
-                                children[i]=String.valueOf(cToi);
+                                children[i]=new Element(Tag.INT,String.valueOf(cToi));
                             }else if (symbol.getTag()==Tag.INT){
-                                children[i]=symbol.getIntValue();
-                            }else
-                                children[i]=symbol.getRealValue();
+                                children[i]=new Element(Tag.INT,symbol.getIntValue());
+                            }else if (symbol.getTag()==Tag.BOOL){
+                                if (symbol.getBoolValue().equals("false")||
+                                        symbol.getBoolValue().equals("0"))
+                                    children[i]=new Element(Tag.INT,"0");
+                                else
+                                    children[i]=new Element(Tag.INT,"1");
+                            }else if (symbol.getTag()==Tag.STRING)
+                                children[i]=new Element(Tag.STRING,symbol.getStringValue());
+                            else
+                                children[i]=new Element(Tag.REAL,symbol.getRealValue());
                         }else
                             return false;
                     }else if (childTag==Tag.ADD || childTag==Tag.SUB
                             ||childTag==Tag.MUL || childTag==Tag.DIVIDE){
-                        String exp = expression_analyze(root.getChildAt(i)).getResult();
+                        ExpressionPart exp = expression_analyze(root.getChildAt(i));
                         if (exp!=null)
-                            children[i]=exp;
+                            children[i]=new Element(exp.getTag(),exp.getResult());
                         else
                             return false;
                     }
                 }
-        }else if (tag == Tag.AND || tag == Tag.OR){
-            String[] children = new String[2];
-            for (int i=0;i<root.getChildCount();i++) {
-                int childTag = root.getChildAt(i).getTag();
-                String childContent = root.getChildAt(i).getContent();
-                if (childTag==Tag.OR || childTag==Tag.AND ||
-                        childTag==Tag.EQ || childTag == Tag.LE || childTag == Tag.GE || childTag == Tag.UE
-                        || childTag == Tag.LESS || childTag == Tag.GREATER){
-                    if (condition_analyze(root.getChildAt(i)))
-                        children[i]="1";
-                    else
-                        children[i]="0";
+                if (children[0]!=null && children[1]!=null){
+                    int tag1 = children[0].getTag();
+                    int tag2 = children[1].getTag();
+                    String value1 = children[0].getValue();
+                    String value2 = children[1].getValue();
+                    boolean b1=true;
+                    boolean b2 =true;
+                    int result=0;
+                    if (tag==Tag.OR){
+                        if (judgeTag(tag1,tag2)==Tag.INT){
+                           if (Integer.parseInt(value1)==0)
+                               b1=false;
+                           if (Integer.parseInt(value1)==0)
+                               b2=false;
+                           if (b1||b2)
+                               result=1;
+                        }
+                    }
                 }
-//                else if (){
-//
-//                }
 
-            }
         }
         return false;
     }
@@ -835,9 +702,6 @@ public class Semantic {
      * @return 返回计算结果
      */
     private ExpressionPart expression_analyze(TreeNode root){
-        boolean isInt = true;
-        boolean hasString = false;
-//        String content = root.getContent();
         int rootTag = root.getTag();
         ExpressionPart part=new ExpressionPart();
         for (int i=0;i<root.getChildCount();i++){
@@ -869,7 +733,7 @@ public class Semantic {
                         else
                             return null;
                     }
-                    Symbol symbol = table.getAllLevel(temp.getContent(),level);
+                    Symbol symbol = table.getAllLevel(tempContent,level);
                     if (symbol.getTag()==Tag.INT)
                         part.setChild(symbol.getIntValue(),i);
                     else if (symbol.getTag()==Tag.REAL){
@@ -880,7 +744,13 @@ public class Semantic {
                         char c = s.charAt(0);
                         int cToi = (int)c;
                         part.setChild(String.valueOf(cToi),i);
-                    }else if ((symbol.getTag()==Tag.STRING)){
+                    }else if (symbol.getTag()==Tag.BOOL){
+                        if (symbol.getBoolValue().equals("false") ||
+                            symbol.getBoolValue().equals("0"))
+                            part.setChild("0",i);
+                        else
+                            part.setChild("1",i);
+                    } else if (symbol.getTag()==Tag.STRING){
                         part.setChild(symbol.getIntValue(),i);
                         part.setIsString(true);
                     }
@@ -892,13 +762,13 @@ public class Semantic {
                 ExpressionPart exp = expression_analyze(root.getChildAt(i));
                 if (exp!=null){
                     part.setChild(exp.getResult(),i);
-                    if (!exp.isInt() && !exp.isString())
+                    if (exp.getTag()==Tag.REAL)
                         part.setIsInt(false);
                 }else
                     return null;
             }
         }
-        if (part.isInt()){
+        if (part.getTag()==Tag.INT){
             int child1 = Integer.parseInt(part.getChild1());
             int child2 = Integer.parseInt(part.getChild2());
             if (rootTag==Tag.ADD){
@@ -923,7 +793,7 @@ public class Semantic {
                 }
             }else
                 return null;
-        }else if (!part.isInt() && !part.isString()){
+        }else if (part.getTag()==Tag.REAL){
             BigDecimal bg1 = new BigDecimal(part.getChild1());
             BigDecimal bg2 = new BigDecimal(part.getChild2());
             if (rootTag==Tag.ADD){

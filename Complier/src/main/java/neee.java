@@ -22,14 +22,30 @@ public class neee {
         a="2323x";
     }
 
+    private static boolean isEsc_char(String str){
+        if (str.contains("\\"))
+            return true;
+        else
+            return false;
+    }
+
+    private static boolean isESC(String s){
+        if (s.equals("\\\"")||s.equals("\\\'")||s.equals("\\n")||s.equals("\\t")
+                ||s.equals("\\r")||s.equals("\\\\"))
+            return true;
+        else
+            return false;
+    }
+
     public static void main(String args[]){
 
-        String s = "2";
+        String s = "\t";
         String  a ="c";
 
-        char n = 'f';
+        char n = 'c';
+        int aaa=(int)n;
         int i =2222;
-        double f =3.2;
+        double f =0.0001;
         a=a+f;
         int dd[]={2,3};
         n=a.charAt(0);
@@ -40,6 +56,6 @@ public class neee {
         double e = f*n;
         boolean b =isInteger(s);
         change(a);
-        System.out.println(a);
+        System.out.println(isESC(s));
     }
 }

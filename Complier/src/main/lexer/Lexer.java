@@ -124,7 +124,7 @@ public class Lexer {
                 char c = str.charAt(i);
                 if (c == '\n' || c == ',' || c == ' ' || c == '\t'
                         || c == '{'|| c == '}' || c == '['|| c == ']'|| c == '(' || c == ')'
-                        || c == ';' || c == '='|| c == '<' || c == '>'
+                        || c == ';' || c == '='|| c == '<' || c == '>' ||c=='\\'
                         || c == '+' || c == '-' || c == '*' || c == '/'||c=='\''){
                     isPositive=false;
                     isNegative=false;
@@ -148,7 +148,7 @@ public class Lexer {
     private int jump_char(int begin, String str){
         if (begin >= str.length())
             return str.length();
-        for (int i = begin+1;i<str.length();i++){
+        for (int i = begin;i<str.length();i++){
             char c = str.charAt(i);
             if (c=='\'')
                 return i;
@@ -228,7 +228,9 @@ public class Lexer {
                                 flag=7;
                             }else if (c=='\''){
                                 isChar=true;
-                                begin=index;
+                                Token token = new Token(Tag.SEPARATOR,"'",lineNum,index+1);
+                                tokens.add(token);
+                                begin=index+1;
                                 flag=9;
                             }else if (c=='"' && !isString){
                                 isChar=true;
@@ -482,29 +484,35 @@ public class Lexer {
                         case 9:
                             int i = jump_char(begin,cmmProgram);
                             //正确字符格式
-                            if (begin+2==i){
-                                String str = cmmProgram.substring(begin,i+1);
+                            if (begin+1==i){
+                                String str = cmmProgram.substring(begin,i);
                                 Token token_char=new Token(Tag.CHAR_S,str,lineNum,i+1-str.length());
                                 tokens.add(token_char);
+                                Token token=new Token(Tag.SEPARATOR,"'",lineNum,i+1);
+                                tokens.add(token);
                                 flag=0;
                                 index=i;
-                            }else if (i==cmmProgram.length()+1){
-                                //缺少后引号
+                            }
+                            else if (i==cmmProgram.length()+1){
+                                //缺少引号
                                 String string = cmmProgram.substring(begin);
-                                Error error = new Error(string,"缺少后引号",lineNum,begin+1);
+                                Error error = new Error(string,"缺少引号",lineNum,begin+1);
                                 errors.add(error);
                                 index=i-1;
                                 flag=0;
-                            }else if (begin+2<i){
-                                String str = cmmProgram.substring(begin,i+1);
-                                String s_judge=cmmProgram.substring(begin+1,i);
-                                if (isESC(s_judge)){
-                                    Token token_char=new Token(Tag.CHAR_S,str,lineNum,i+1-str.length());
+                            }else if (begin+1<i){
+                                String s_judge=cmmProgram.substring(begin,i);
+                                if (isESC(s_judge) || s_judge.equals("\\'")){
+                                    Token token_char=new Token(Tag.CHAR_S,s_judge,lineNum,i+1-s_judge.length());
                                     tokens.add(token_char);
+                                    Token token=new Token(Tag.SEPARATOR,"'",lineNum,i+1);
+                                    tokens.add(token);
                                 }else {
                                     //字符格式不对
-                                    Error error = new Error(str,"字符格式错误",lineNum,begin+1);
+                                    Error error = new Error(s_judge,"字符格式错误",lineNum,begin+1);
                                     errors.add(error);
+                                    Token token=new Token(Tag.SEPARATOR,"'",lineNum,i+1);
+                                    tokens.add(token);
                                 }
                                 index=i;
                                 flag=0;
