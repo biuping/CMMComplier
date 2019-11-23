@@ -16,7 +16,7 @@ public class Tag {
      * 并，或，
      * */
     public final static int STATEMENT=0,CONDITION=1,DECLARE=2,ASSIGN_STA=3,BLOCK=4,
-                            TRUE=252,FALSE=254,BOOL=254,STRING=255,
+                            TRUE=252,FALSE=253,BOOL=254,STRING=255,
                             IF=256, ELSE=257, WHILE=258,INT=259, REAL=260, CHAR=261,PRINT =262,
                             SCAN =263, BREAK=264,CONTINUE=265,FOR=266,
                             SUB=267, MUL=268, DIVIDE=269, ASSIGN =270, LESS=271, GREATER=272,

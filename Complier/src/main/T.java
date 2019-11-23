@@ -5,6 +5,7 @@ import main.lexer.Lexer;
 import main.lexer.Token;
 import main.parse.Parse;
 import main.parse.TreeNode;
+import main.semantic.Semantic;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -56,6 +57,9 @@ public class T {
             JFrame treeFrame=new TreeFrame(root);
             treeFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             treeFrame.setVisible(true);
+
+            Semantic semantic = new Semantic(root);
+            semantic.run();
 //            System.out.println(root);
 //            while (root.getChildAt(i)!=null){
 //                System.out.println(root);

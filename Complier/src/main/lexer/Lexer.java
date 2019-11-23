@@ -12,7 +12,6 @@ public class Lexer {
     private static boolean isPositive = false;
     private static boolean isNegative = false;
     private boolean isChar = false;
-    private boolean isString = false;
     // 分析后得到的tokens集合，用于其后的语法及语义分析
     private ArrayList<Token> tokens = new ArrayList<Token>();
     // 读取CMM文件文本
@@ -232,7 +231,7 @@ public class Lexer {
                                 tokens.add(token);
                                 begin=index+1;
                                 flag=9;
-                            }else if (c=='"' && !isString){
+                            }else if (c=='"'){
                                 isChar=true;
                                 Token token = new Token(Tag.SEPARATOR,"\"",lineNum,index+1);
                                 tokens.add(token);
@@ -242,11 +241,6 @@ public class Lexer {
                                 flag=12;
                             }else if (c=='|'){
                                 flag=13;
-                            }else if (c=='"' && isString){
-                                begin=index+1;
-                                flag=14;
-                                Token token = new Token(Tag.SEPARATOR,"\"",lineNum,index+1);
-                                tokens.add(token);
                             }
                             else {
                                 flag=0;
@@ -310,7 +304,6 @@ public class Lexer {
                                             tokens.add(token);
                                             break;
                                         case "string":
-                                            isString=true;
                                             token = new Token(Tag.STRING, str,lineNum,index-str.length()+1);
                                             tokens.add(token);
                                             break;
@@ -391,7 +384,10 @@ public class Lexer {
                                 kind = tokens.get(tokens.size()-1).getTag();
                                 context = tokens.get(tokens.size()-1).getContent();
                                 if (kind==Tag.REALNUM||kind==Tag.INTNUM||context.equals(")")||context.equals("]")
-                                        ||kind==Tag.ID||kind==Tag.CHAR||context.equals("=")){
+                                        ||kind==Tag.ID||kind==Tag.CHAR ||kind==Tag.STR || kind==Tag.CHAR_S||
+                                        kind==Tag.STRING||kind==Tag.INT || kind==Tag.REAL ||
+                                        kind == Tag.BOOL || kind==Tag.TRUE || kind==Tag.FALSE ||
+                                        context.equals("\"")||context.equals("'")){
                                     Token token = new Token(Tag.SUB,"-",lineNum,index+1);
                                     tokens.add(token);
                                     index--;
@@ -537,7 +533,10 @@ public class Lexer {
                                 kind = tokens.get(tokens.size()-1).getTag();
                                 context = tokens.get(tokens.size()-1).getContent();
                                 if (kind==Tag.REALNUM||kind==Tag.INTNUM||context.equals(")")||context.equals("]")
-                                        ||kind==Tag.ID||kind==Tag.CHAR){
+                                        ||kind==Tag.ID||kind==Tag.CHAR ||kind==Tag.STR || kind==Tag.CHAR_S||
+                                        kind==Tag.STRING||kind==Tag.INT || kind==Tag.REAL ||
+                                        kind == Tag.BOOL || kind==Tag.TRUE || kind==Tag.FALSE||
+                                        context.equals("\"")||context.equals("'")){
                                     Token token = new Token(Tag.ADD,"+",lineNum,index+1);
                                     tokens.add(token);
                                     index--;
@@ -553,22 +552,19 @@ public class Lexer {
                             }
                             break;
                         case 11:
-                            i = jump_string(begin,cmmProgram);
-                            if(i==cmmProgram.length()+1){
-                                String string = cmmProgram.substring(begin,i-1);
+                            int si = jump_string(begin,cmmProgram);
+                            if (si<cmmProgram.length()){
+                                index=si;
+                                String string = cmmProgram.substring(begin,index);
+                                Token token = new Token(Tag.STR,string,lineNum,begin);
+                                tokens.add(token);
+                                Token token1 = new Token(Tag.SEPARATOR,"\"",lineNum,index+1);
+                                tokens.add(token1);
+                            }else if (si==cmmProgram.length()+1){
+                                index = cmmProgram.length();
+                                String  string = cmmProgram.substring(begin,index);
                                 Error error = new Error(string,"缺少引号",lineNum,begin+1);
                                 errors.add(error);
-                                index=i-1;
-                            }else {
-                                char ch = cmmProgram.charAt(i);
-                                if (ch=='"'){
-                                    String str = cmmProgram.substring(begin,i);
-                                    Token token_chars=new Token(Tag.STR,str,lineNum,i+1-str.length());
-                                    tokens.add(token_chars);
-                                    Token token1 = new Token(Tag.SEPARATOR,"\"",lineNum,i+1);
-                                    tokens.add(token1);
-                                    index=i;
-                                }
                             }
                             flag=0;
                             break;
@@ -599,24 +595,6 @@ public class Lexer {
                                 index--;
                                 flag=0;
                             }
-                            break;
-                        case 14:
-                            int si = jump_string(begin,cmmProgram);
-                            if (si<cmmProgram.length()){
-                                index=si;
-                                String string = cmmProgram.substring(begin,index);
-                                Token token = new Token(Tag.STR,string,lineNum,begin);
-                                tokens.add(token);
-                                Token token1 = new Token(Tag.SEPARATOR,"\"",lineNum,index+1);
-                                tokens.add(token1);
-                            }else if (si==cmmProgram.length()+1){
-                                index = cmmProgram.length();
-                                String  string = cmmProgram.substring(begin,index);
-                                Error error = new Error(string,"缺少引号",lineNum,begin+1);
-                                errors.add(error);
-                            }
-                            flag=0;
-                            isString=false;
                             break;
                     }
 
