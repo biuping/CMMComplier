@@ -44,18 +44,18 @@ public class neee {
 
         char n = 'c';
         int aaa=(int)n;
-        int i =2222;
-        double f =0.0001;
+        int i =1;
+        double f =1.0;
         a=a+f;
         int dd[]={2,3};
         n=a.charAt(0);
         Object[] o = new Object[2];
         o[0]=i;
         o[1]=n;
-        char d=s.charAt(0);
+        char d=(char)0;
         double e = f*n;
         boolean b =isInteger(s);
         change(a);
-        System.out.println(isESC(s));
+        System.out.println(d);
     }
 }

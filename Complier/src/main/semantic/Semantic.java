@@ -65,6 +65,7 @@ public class Semantic {
             return false;
     }
 
+
     //输入赋值
     public synchronized void setInput(String input) {
         this.input = input;
@@ -221,7 +222,7 @@ public class Semantic {
                                     else
                                         table.addSymbol(itemSymbol);
                                 }
-                                
+
                             }
                         }else {
                             setError("数组大小与声明大小不匹配",child.getLineNum());
@@ -285,6 +286,16 @@ public class Semantic {
                     else
                         return null;
                 }
+            }else if (valueNode.getTag()==Tag.EQ || valueNode.getTag() == Tag.LE || valueNode.getTag() == Tag.GE || valueNode.getTag() == Tag.UE
+                    || valueNode.getTag() == Tag.LESS || valueNode.getTag() == Tag.GREATER||
+                    valueNode.getTag() == Tag.AND || valueNode.getTag() == Tag.OR){
+                if (condition_analyze(valueNode)){
+                    symbol.setIntValue("1");
+                    symbol.setRealValue(String.valueOf(Double.parseDouble("1")));
+                }else {
+                    symbol.setIntValue("0");
+                    symbol.setRealValue(String.valueOf(Double.parseDouble("0")));
+                }
             }
         }else if (tag==Tag.REAL){  //real 声明
             if(valueNode.getTag()==Tag.INTNUM){
@@ -328,23 +339,37 @@ public class Semantic {
                     }else
                         return null;
                 }
+            }else if (valueNode.getTag()==Tag.EQ || valueNode.getTag() == Tag.LE || valueNode.getTag() == Tag.GE || valueNode.getTag() == Tag.UE
+                    || valueNode.getTag() == Tag.LESS || valueNode.getTag() == Tag.GREATER||
+                    valueNode.getTag() == Tag.AND || valueNode.getTag() == Tag.OR){
+                if (condition_analyze(valueNode)){
+                    symbol.setRealValue(String.valueOf(Double.parseDouble("1")));
+                }else {
+                    symbol.setRealValue(String.valueOf(Double.parseDouble("0")));
+                }
             }
         }else if (tag==Tag.CHAR){  //real 声明
             if(valueNode.getTag()==Tag.INTNUM){
-                setError("不能将int数值赋值给char型变量",valueNode.getLineNum());
+                char c = (char)Integer.parseInt(valueNode.getContent());
+                symbol.setCharValue(String.valueOf(c));
             }else if (valueNode.getTag()==Tag.REAL){
                 setError("不能将real数值赋值给char型变量",valueNode.getLineNum());
             }else if (valueNode.getTag()==Tag.CHAR_S)
                 symbol.setCharValue(value);
             else if (valueNode.getTag()==Tag.STR)
                 setError("不能将string字符串赋值给char型变量",valueNode.getLineNum());
-            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
-                setError("不能将布尔值赋值给char型变量",valueNode.getLineNum());
+            else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE){
+                if (valueNode.getTag()==Tag.TRUE)
+                    symbol.setCharValue(String.valueOf((char)1));
+                else
+                    symbol.setCharValue(String.valueOf((char)0));
+            }
             else if (valueNode.getTag()==Tag.ID){
                 if (checkID(valueNode,level)){
                     Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
                     if (idSymbol.getTag() ==Tag.INT ){
-                        setError("不能将int型变量赋值给char型变量",valueNode.getLineNum());
+                        char c = (char)Integer.parseInt(idSymbol.getIntValue());
+                        symbol.setCharValue(String.valueOf(c));
                     }else if (idSymbol.getTag()==Tag.REAL){
                         setError("不能将real型变量字符赋值给char型变量",valueNode.getLineNum());
                     }
@@ -352,13 +377,31 @@ public class Semantic {
                         symbol.setCharValue(idSymbol.getCharValue());
                     else if (idSymbol.getTag()==Tag.STRING)
                         setError("不能将string变量赋值给char型变量",valueNode.getLineNum());
-                    else if (idSymbol.getTag()==Tag.BOOL)
-                        setError("不能将布尔型变量赋值给char型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.BOOL){
+                        if (idSymbol.getBoolValue().equals("1"))
+                            symbol.setCharValue(String.valueOf((char)1));
+                        else
+                            symbol.setCharValue(String.valueOf((char)0));
+                    }
                 }else
                     return null;
-            }else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
+            }else if (valueNode.getTag()==Tag.EQ || valueNode.getTag() == Tag.LE || valueNode.getTag() == Tag.GE || valueNode.getTag() == Tag.UE
+                    || valueNode.getTag() == Tag.LESS || valueNode.getTag() == Tag.GREATER||
+                    valueNode.getTag() == Tag.AND || valueNode.getTag() == Tag.OR){
+                if (condition_analyze(valueNode)){
+                    symbol.setCharValue(String.valueOf(1));
+                }else {
+                    symbol.setCharValue(String.valueOf(0));
+                }
+            } else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
                     ||valueNode.getTag()==Tag.MUL || valueNode.getTag()==Tag.DIVIDE){
-                setError("不能将算术表达式赋值给char型变量",valueNode.getLineNum());
+                ExpressionPart exp = expression_analyze(valueNode);
+                assert exp != null;
+                if (exp.getTag()==Tag.INT){
+                    symbol.setCharValue(String.valueOf((char)Integer.parseInt(exp.getResult())));
+                }else {
+                    setError("类型不匹配，不能赋值给char型变量",valueNode.getLineNum());
+                }
             }
         }else if (tag==Tag.STRING){  //real 声明
             if(valueNode.getTag()==Tag.INTNUM){
@@ -391,15 +434,30 @@ public class Semantic {
                 ExpressionPart part = expression_analyze(valueNode);
                 symbol.setStringValue(part.getResult());
             }else {
-                setError("除加法之外的算术表达式不能赋值给string型变量",valueNode.getLineNum());
+                setError("除加法之外的运算表达式不能赋值给string型变量",valueNode.getLineNum());
             }
         }else if (tag == Tag.BOOL){
             if(valueNode.getTag()==Tag.INTNUM){
-                setError("不能将int数值赋值给布尔型变量",valueNode.getLineNum());
+                if (Integer.parseInt(valueNode.getContent())==0)
+                    symbol.setBoolValue("0");
+                else
+                    symbol.setBoolValue("1");
             }else if (valueNode.getTag()==Tag.REAL){
-                setError("不能将real数值赋值给布尔型变量",valueNode.getLineNum());
-            }else if (valueNode.getTag()==Tag.CHAR_S)
-                setError("不能将char字符赋值给布尔型变量",valueNode.getLineNum());
+                if (Double.parseDouble(valueNode.getContent())==0)
+                    symbol.setBoolValue("0");
+                else
+                    symbol.setBoolValue("1");
+            }else if (valueNode.getTag()==Tag.CHAR_S){
+                int i;
+                if (isEsc_char(valueNode.getContent()))
+                    i=(int)valueNode.getContent().charAt(1);
+                else
+                    i=(int)valueNode.getContent().charAt(0);
+                if (i==0)
+                    symbol.setBoolValue("0");
+                else
+                    symbol.setBoolValue("1");
+            }
             else if (valueNode.getTag()==Tag.STR)
                 setError("不能将string字符串赋值给布尔型变量",valueNode.getLineNum());
             else if (valueNode.getTag()==Tag.TRUE || valueNode.getTag()==Tag.FALSE)
@@ -408,12 +466,27 @@ public class Semantic {
                 if (checkID(valueNode,level)){
                     Symbol idSymbol = table.getAllLevel(valueNode.getContent(),level);
                     if (idSymbol.getTag() ==Tag.INT ){
-                        setError("不能将int型变量赋值给布尔型变量",valueNode.getLineNum());
+                        if (Integer.parseInt(idSymbol.getIntValue())==0)
+                            symbol.setBoolValue("0");
+                        else
+                            symbol.setBoolValue("1");
                     }else if (idSymbol.getTag()==Tag.REAL){
-                        setError("不能将real型变量赋值给布尔型变量",valueNode.getLineNum());
+                        if (Double.parseDouble(idSymbol.getRealValue())==0)
+                            symbol.setBoolValue("0");
+                        else
+                            symbol.setBoolValue("1");
                     }
-                    else if (idSymbol.getTag()==Tag.CHAR)
-                        setError("不能将char字符赋值给布尔型变量",valueNode.getLineNum());
+                    else if (idSymbol.getTag()==Tag.CHAR){
+                        int i;
+                        if (isEsc_char(idSymbol.getCharValue()))
+                            i=(int)idSymbol.getCharValue().charAt(1);
+                        else
+                            i=(int)idSymbol.getCharValue().charAt(0);
+                        if (i==0)
+                            symbol.setBoolValue("0");
+                        else
+                            symbol.setBoolValue("1");
+                    }
                     else if (idSymbol.getTag()==Tag.STRING)
                         setError("不能将string变量赋值给布尔型变量",valueNode.getLineNum());
                     else if (idSymbol.getTag()==Tag.BOOL)
@@ -422,7 +495,21 @@ public class Semantic {
                     return null;
             }else if (valueNode.getTag()==Tag.ADD || valueNode.getTag()==Tag.SUB
                     ||valueNode.getTag()==Tag.MUL || valueNode.getTag()==Tag.DIVIDE){
-                setError("不能将算术表达式赋值给布尔型变量",valueNode.getLineNum());
+                ExpressionPart exp = expression_analyze(valueNode);
+                assert exp != null;
+                if (exp.getTag()==Tag.STRING){
+                    setError("不能将string变量赋值给布尔型变量",valueNode.getLineNum());
+                }else if (exp.getTag()==Tag.INT){
+                    if (Integer.parseInt(exp.getResult())==0)
+                        symbol.setBoolValue("0");
+                    else
+                        symbol.setBoolValue("1");
+                }else {
+                    if (Double.parseDouble(exp.getResult())==0)
+                        symbol.setBoolValue("0");
+                    else
+                        symbol.setBoolValue("1");
+                }
             }else if (valueNode.getTag()==Tag.EQ || valueNode.getTag()==Tag.UE
                     || valueNode.getTag()==Tag.GE || valueNode.getTag()==Tag.LE
                     || valueNode.getTag()==Tag.LESS || valueNode.getTag()==Tag.GREATER
@@ -575,18 +662,190 @@ public class Semantic {
                     boolean b1=true;
                     boolean b2 =true;
                     int result=0;
-                    if (tag==Tag.OR){
-                        if (judgeTag(tag1,tag2)==Tag.INT){
-                           if (Integer.parseInt(value1)==0)
-                               b1=false;
-                           if (Integer.parseInt(value1)==0)
-                               b2=false;
-                           if (b1||b2)
-                               result=1;
-                        }
+                    switch (tag){
+                        case Tag.OR:
+                            if (judgeTag(tag1, tag2) == Tag.INT) {
+                                if (Integer.parseInt(value1) == 0)
+                                    b1 = false;
+                                if (Integer.parseInt(value2) == 0)
+                                    b2 = false;
+                                if (b1 || b2)
+                                    result = 1;
+                            } else if (judgeTag(tag1, tag2) == Tag.REALNUM) {
+                                if (Double.parseDouble(value1) == 0)
+                                    b1 = false;
+                                if (Double.parseDouble(value2) == 0)
+                                    b2 = false;
+                                if (b1 || b2)
+                                    result = 1;
+                            } else {
+                                setError("字符串不能进行或运算", root.getLineNum());
+                            }
+                            break;
+                        case Tag.AND:
+                            if (judgeTag(tag1, tag2) == Tag.INT) {
+                                if (Integer.parseInt(value1) == 0)
+                                    b1 = false;
+                                if (Integer.parseInt(value2) == 0)
+                                    b2 = false;
+                                if (b1 && b2)
+                                    result = 1;
+                            } else if (judgeTag(tag1, tag2) == Tag.REALNUM) {
+                                if (Double.parseDouble(value1) == 0)
+                                    b1 = false;
+                                if (Double.parseDouble(value2) == 0)
+                                    b2 = false;
+                                if (b1 && b2)
+                                    result = 1;
+                            } else {
+                                setError("字符串不能进行与运算", root.getLineNum());
+                            }
+                            break;
+                        case Tag.EQ:
+                            if (judgeTag(tag1, tag2) == Tag.STRING) {
+                                if (tag1 != tag2)
+                                    setError(value1 + "," + value2 + "类型不允许做==运算",
+                                            root.getLineNum());
+                                else {
+                                    if (value1.equals(value2))
+                                        result = 1;
+                                }
+                            } else if (judgeTag(tag1, tag2) == Tag.INT) {
+                                if (Integer.parseInt(value1) == Integer.parseInt(value2))
+                                    result = 1;
+                            } else {
+                                if (tag1 == Tag.REAL) {
+                                    if (tag2 == Tag.REAL) {
+                                        if (Double.parseDouble(value1) == Double.parseDouble(value2))
+                                            result = 1;
+                                    } else {
+                                        if (Double.parseDouble(value1) == Integer.parseInt(value2))
+                                            result = 1;
+                                    }
+                                } else {
+                                    if (Double.parseDouble(value2) == Integer.parseInt(value1))
+                                        result = 1;
+                                }
+                            }
+                            break;
+                        case Tag.UE:
+                            if (judgeTag(tag1, tag2) == Tag.STRING) {
+                                if (tag1 != tag2)
+                                    setError(value1 + "," + value2 + "类型不允许做!=运算",
+                                            root.getLineNum());
+                                else {
+                                    if (!value1.equals(value2))
+                                        result = 1;
+                                }
+                            } else if (judgeTag(tag1, tag2) == Tag.INT) {
+                                if (Integer.parseInt(value1) != Integer.parseInt(value2))
+                                    result = 1;
+                            } else {
+                                if (tag1 == Tag.REAL) {
+                                    if (tag2 == Tag.REAL) {
+                                        if (Double.parseDouble(value1) != Double.parseDouble(value2))
+                                            result = 1;
+                                    } else {
+                                        if (Double.parseDouble(value1) != Integer.parseInt(value2))
+                                            result = 1;
+                                    }
+                                } else {
+                                    if (Double.parseDouble(value2) != Integer.parseInt(value1))
+                                        result = 1;
+                                }
+                            }
+                            break;
+                        case Tag.GE:
+                            if (judgeTag(tag1, tag2) == Tag.STRING) {
+                                setError(value1 + "," + value2 + "的类型不允许做>=运算",
+                                        root.getLineNum());
+                            } else if (judgeTag(tag1, tag2) == Tag.INT) {
+                                if (Integer.parseInt(value1) >= Integer.parseInt(value2))
+                                    result = 1;
+                            } else {
+                                if (tag1 == Tag.REAL) {
+                                    if (tag2 == Tag.REAL) {
+                                        if (Double.parseDouble(value1) >= Double.parseDouble(value2))
+                                            result = 1;
+                                    } else {
+                                        if (Double.parseDouble(value1) >= Integer.parseInt(value2))
+                                            result = 1;
+                                    }
+                                } else {
+                                    if (Double.parseDouble(value2) >= Integer.parseInt(value1))
+                                        result = 1;
+                                }
+                            }
+                            break;
+                        case Tag.LE:
+                            if (judgeTag(tag1, tag2) == Tag.STRING) {
+                                setError(value1 + "," + value2 + "的类型不允许做<=运算",
+                                        root.getLineNum());
+                            } else if (judgeTag(tag1, tag2) == Tag.INT) {
+                                if (Integer.parseInt(value1) <= Integer.parseInt(value2))
+                                    result = 1;
+                            } else {
+                                if (tag1 == Tag.REAL) {
+                                    if (tag2 == Tag.REAL) {
+                                        if (Double.parseDouble(value1) <= Double.parseDouble(value2))
+                                            result = 1;
+                                    } else {
+                                        if (Double.parseDouble(value1) <= Integer.parseInt(value2))
+                                            result = 1;
+                                    }
+                                } else {
+                                    if (Double.parseDouble(value2) <= Integer.parseInt(value1))
+                                        result = 1;
+                                }
+                            }
+                            break;
+                        case Tag.GREATER:
+                            if (judgeTag(tag1, tag2) == Tag.STRING) {
+                                setError(value1 + "," + value2 + "的类型不允许做>运算",
+                                        root.getLineNum());
+                            } else if (judgeTag(tag1, tag2) == Tag.INT) {
+                                if (Integer.parseInt(value1) > Integer.parseInt(value2))
+                                    result = 1;
+                            } else {
+                                if (tag1 == Tag.REAL) {
+                                    if (tag2 == Tag.REAL) {
+                                        if (Double.parseDouble(value1) > Double.parseDouble(value2))
+                                            result = 1;
+                                    } else {
+                                        if (Double.parseDouble(value1) > Integer.parseInt(value2))
+                                            result = 1;
+                                    }
+                                } else {
+                                    if (Double.parseDouble(value2) > Integer.parseInt(value1))
+                                        result = 1;
+                                }
+                            }
+                            break;
+                        case Tag.LESS:
+                            if (judgeTag(tag1, tag2) == Tag.STRING) {
+                                setError(value1 + "," + value2 + "的类型不允许做<运算",
+                                        root.getLineNum());
+                            } else if (judgeTag(tag1, tag2) == Tag.INT) {
+                                if (Integer.parseInt(value1) < Integer.parseInt(value2))
+                                    result = 1;
+                            } else {
+                                if (tag1 == Tag.REAL) {
+                                    if (tag2 == Tag.REAL) {
+                                        if (Double.parseDouble(value1) < Double.parseDouble(value2))
+                                            result = 1;
+                                    } else {
+                                        if (Double.parseDouble(value1) < Integer.parseInt(value2))
+                                            result = 1;
+                                    }
+                                } else {
+                                    if (Double.parseDouble(value2) < Integer.parseInt(value1))
+                                        result = 1;
+                                }
+                            }
+                            break;
                     }
+                    return result == 1;
                 }
-
         }
         return false;
     }
@@ -757,8 +1016,8 @@ public class Semantic {
                 }else{
                     return null;
                 }
-            }else if (root.getTag()==Tag.ADD || root.getTag()==Tag.SUB
-                    || root.getTag()==Tag.MUL || root.getTag()==Tag.DIVIDE){
+            }else if (tag==Tag.ADD || tag==Tag.SUB
+                    || tag==Tag.MUL || tag==Tag.DIVIDE){
                 ExpressionPart exp = expression_analyze(root.getChildAt(i));
                 if (exp!=null){
                     part.setChild(exp.getResult(),i);
@@ -766,6 +1025,13 @@ public class Semantic {
                         part.setIsInt(false);
                 }else
                     return null;
+            }else if (tag==Tag.EQ || tag == Tag.LE || tag == Tag.GE || tag == Tag.UE
+                    || tag == Tag.LESS || tag == Tag.GREATER||
+                    tag == Tag.AND || tag == Tag.OR){
+                if (condition_analyze(root)){
+                    part.setChild("1",i);
+                }else
+                    part.setChild("0",i);
             }
         }
         if (part.getTag()==Tag.INT){
