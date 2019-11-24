@@ -1,5 +1,7 @@
 package main.java;
 
+import java.util.Scanner;
+
 public class neee {
 
     private static boolean isInteger(String s){
@@ -39,9 +41,10 @@ public class neee {
 
     public static void main(String args[]){
 
-        String s = "\t";
+        String s="";
         String  a ="c";
-
+        Scanner scanner = new Scanner(System.in);
+        s=scanner.nextLine();
         char n = 'c';
         int aaa=(int)n;
         int i =1;
@@ -49,13 +52,17 @@ public class neee {
         a=a+f;
         int dd[]={2,3};
         n=a.charAt(0);
-        Object[] o = new Object[2];
-        o[0]=i;
-        o[1]=n;
+
         char d=(char)0;
         double e = f*n;
         boolean b =isInteger(s);
-        change(a);
+        if (isESC(s)){
+            d=s.charAt(1);
+        }else
+            d=s.charAt(0);
+
         System.out.println(d);
+        System.out.print(s);
+        System.out.println(a);
     }
 }

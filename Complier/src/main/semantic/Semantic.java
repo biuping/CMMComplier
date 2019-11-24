@@ -58,15 +58,12 @@ public class Semantic {
     }
 
     private boolean isEsc_char(String s) {
-        if (s.equals("\\\"") || s.equals("\\\'") || s.equals("\\n") || s.equals("\\t")
-                || s.equals("\\r") || s.equals("\\\\"))
-            return true;
-        else
-            return false;
+        return s.equals("\\\"") || s.equals("\\\'") || s.equals("\\n") || s.equals("\\t")
+                || s.equals("\\r") || s.equals("\\\\");
     }
 
     //判断数组赋值类型是否匹配
-    private boolean judgeArrTypeEqual(int declareTag,int assignTag){
+    private boolean judgeTypeEqual(int declareTag,int assignTag){
         if (declareTag==Tag.INT){
             return assignTag==Tag.BOOL || assignTag == Tag.CHAR_S ||
                     assignTag == Tag.INT || assignTag == Tag.CHAR ||
@@ -94,6 +91,49 @@ public class Semantic {
         }
         return false;
     }
+
+    //print打印转义的真正值
+    private static void printEsc(String esc){
+        switch (esc){
+            case "\\\"":
+                System.out.println("\"");
+                break;
+            case "\\\'":
+                System.out.println("'");
+                break;
+            case "\\n":
+                System.out.println();
+                break;
+            case "\\t":
+                System.out.println("\t");
+                break;
+            case "\\r":
+                System.out.println("\r");
+                break;
+            case "\\\\":
+                System.out.println("\\");
+                break;
+        }
+    }
+
+    //根据Tag返回symbol的值
+    private String getSymoblValue(Symbol symbol){
+        switch (symbol.getTag()){
+            case Tag.INT:
+                return symbol.getIntValue();
+            case Tag.REAL:
+                return symbol.getRealValue();
+            case Tag.CHAR:
+                return symbol.getCharValue();
+            case Tag.BOOL:
+                return symbol.getBoolValue();
+            case Tag.STRING:
+                return symbol.getStringValue();
+            default:
+                return "";
+        }
+    }
+
     //输入赋值
     public synchronized void setInput(String input) {
         this.input = input;
@@ -138,14 +178,43 @@ public class Semantic {
         for (int i = 0; i < root.getChildCount(); i++) {
             TreeNode currentNode = root.getChildAt(i);
             int tag = currentNode.getTag();
-            if (tag == Tag.IF) {
-                //进入if代码段，作用域改变
-                level++;
-
-            } else if (tag == Tag.INT || tag == Tag.REAL
+            if (tag == Tag.INT || tag == Tag.REAL
                     || tag == Tag.CHAR || tag == Tag.STRING || tag == Tag.BOOL) {
+                //声明语句
                 declare_analyze(currentNode);
-            } else if (tag == Tag.PRINT) {
+            }else if(tag==Tag.ASSIGN){
+                //赋值语句
+                assign_analyze(currentNode);
+            }else if (tag==Tag.IF){
+                //进入if，作用域改变
+                level++;
+                if_analyze(currentNode);
+                //出if，作用域改变
+                level--;
+                table.update(level);
+            }else if (tag==Tag.FOR){
+                //进入for，作用域改变
+                level++;
+                for_analyze(currentNode);
+                //出for，作用域改变
+                level--;
+                table.update(level);
+            }else if (tag==Tag.WHILE){
+                //进入while，作用域改变
+                level++;
+                while_analyze(currentNode);
+                //出while，作用域改变
+                level--;
+                table.update(level);
+            }else if (tag==Tag.BLOCK){
+                //进入block，作用域改变
+                level++;
+                statement(currentNode);
+                //出block，作用域改变
+                level--;
+                table.update(level);
+            }
+            else if (tag == Tag.PRINT) {
                 print_analyze(currentNode.getChildAt(0));
             }
         }
@@ -160,7 +229,49 @@ public class Semantic {
         int count = root.getChildCount();
         TreeNode conditionNode = root.getChildAt(0);
         TreeNode statementNode = root.getChildAt(1);
-        //todo 条件语句判断
+        if (condition_analyze(conditionNode.getChildAt(0))){
+            statement(statementNode);
+        }else if (count>=3){
+            for (int i=2;i<count;i++){
+                if (root.getChildAt(i).getTag()==Tag.IF){//else if结点
+                    level++;
+                    if (elseif_analyze(root.getChildAt(i))){
+                        level--;
+                        table.update(level);
+                        break;
+                    }
+                    level--;
+                    table.update(level);
+                }else if (root.getChildAt(i).getTag()==Tag.ELSE){
+                    TreeNode elseNode = root.getChildAt(i);
+                    level++;
+                    statement(elseNode);
+                    level--;
+                    table.update(level);
+                }
+            }
+        }else {
+            //条件为假，且没有else if，else
+            return;
+        }
+    }
+
+    /**
+     * if代码段语义分析
+     *
+     * @param root
+     * else if树节点
+     * @return 是否进入这个elseif 如果是 接下来的else if，else跳过
+     */
+    private boolean elseif_analyze(TreeNode root){
+        TreeNode conditionNode = root.getChildAt(0);
+        TreeNode statementNode = root.getChildAt(1);
+        if (condition_analyze(conditionNode.getChildAt(0))){
+            statement(statementNode);
+            return true;
+        }else {
+            return false;
+        }
     }
 
     /**
@@ -596,6 +707,38 @@ public class Semantic {
     }
 
     /**
+     * assign语句分析
+     *
+     * @param root
+     * 语法树中赋值(=)语句结点
+     */
+    private void assign_analyze(TreeNode root){
+        //被赋值的节点
+        TreeNode leftNode = root.getChildAt(0);
+        String content = leftNode.getContent();
+        if (table.getAllLevel(content,level) != null){
+            if (leftNode.getChildCount()!=0){
+                String array = array_analyze(leftNode.getChildAt(0),
+                        table.getAllLevel(content,level).getArraySize());
+                if (array!=null)
+                    content+="@"+content;
+                else
+                    return;
+            }
+        }else {
+            setError("变量"+content+"未声明",leftNode.getLineNum());
+            return;
+        }
+        //已经声明，找到symbol
+        Symbol symbol = table.getAllLevel(content,level);
+        int leftTag = symbol.getTag();
+        //赋予的值
+        TreeNode valueNode = root.getChildAt(1);
+        String valueContent = valueNode.getContent();
+        String s = declare_sub(leftTag,valueNode,symbol,valueContent);
+    }
+
+    /**
      * print语句分析
      *
      * @param root print节点
@@ -604,10 +747,15 @@ public class Semantic {
         int tag = root.getTag();
         String content = root.getContent();
         if (tag == Tag.INTNUM || tag == Tag.REALNUM ||
-                tag == Tag.CHAR_S || tag == Tag.STR ||
                 tag == Tag.TRUE || tag == Tag.FALSE) {
             System.out.println(root.getContent());
-        } else if (tag == Tag.ID) {
+        }else if (tag == Tag.CHAR_S || tag == Tag.STR ){
+            if (isEsc_char(root.getContent()))
+                printEsc(root.getContent());
+            else
+                System.out.println(root.getContent());
+        }
+        else if (tag == Tag.ID) {
             if (checkID(root, level)) {
                 if (root.getChildCount() > 0) {
                     String array = array_analyze(root.getChildAt(0),
@@ -623,9 +771,15 @@ public class Semantic {
                 else if (symbol.getTag() == Tag.REAL ){
                     System.out.println(symbol.getRealValue());
                 }else if (symbol.getTag()==Tag.STRING){
-                    System.out.println(symbol.getStringValue());
+                    if (isEsc_char(symbol.getStringValue()))
+                        printEsc(symbol.getStringValue());
+                    else
+                        System.out.println(symbol.getStringValue());
                 }else if (symbol.getTag()==Tag.CHAR){
-                    System.out.println(symbol.getCharValue());
+                    if (isEsc_char(symbol.getCharValue()))
+                        printEsc(symbol.getCharValue());
+                    else
+                        System.out.println(symbol.getCharValue());
                 }else if (symbol.getTag()==Tag.BOOL){
                     if (symbol.getBoolValue().equals("0"))
                         System.out.println("false");
@@ -646,6 +800,61 @@ public class Semantic {
             else
                 System.out.println("false");
         }
+    }
+
+    /**
+     * 分析for语句
+     * @param root
+     * for语句结点
+     */
+    private void for_analyze(TreeNode root){
+        //以声明或赋值方法确定for循环变量的结点
+        TreeNode initNode = root.getChildAt(0);
+        //条件语句结点
+        TreeNode conditionNode = root.getChildAt(1);
+        //变量变化语句结点
+        TreeNode changeNode = root.getChildAt(2);
+        //for代码块语句结点
+        TreeNode statementNode = root.getChildAt(3);
+        if (initNode.getTag()==Tag.DECLARE){
+            declare_analyze(initNode.getChildAt(0));
+        }else if (initNode.getTag()==Tag.ASSIGN_STA){
+            assign_analyze(initNode.getChildAt(0));
+        }
+        while (condition_analyze(conditionNode.getChildAt(0))){
+            level++;
+            statement(statementNode);
+            level--;
+            table.update(level);
+            assign_analyze(changeNode.getChildAt(0));
+        }
+    }
+
+    /**
+     * while语句分析
+     *
+     * @param root
+     * while节点
+     */
+    private void while_analyze(TreeNode root){
+        TreeNode conditionNode = root.getChildAt(0);
+        TreeNode statementNode = root.getChildAt(1);
+        while (condition_analyze(conditionNode.getChildAt(0))){
+            level++;
+            statement(statementNode);
+            level--;
+            table.update(level);
+        }
+    }
+
+    /**
+     * scan语句分析
+     *
+     * @param root
+     * while节点
+     */
+    private void scan_analyze(TreeNode root){
+
     }
 
     /**
@@ -1089,6 +1298,10 @@ public class Semantic {
             } else if (tag == Tag.REALNUM) {
                 part.setChild(tempContent, i);
                 part.setIsInt(false);
+            }else if (tag==Tag.TRUE){
+                part.setChild("1", i);
+            }else if (tag==Tag.FALSE){
+                part.setChild("0", i);
             } else if (tag == Tag.CHAR_S) {
                 //将char转成int计算,int要转成string才能存入children数组
                 char c = tempContent.charAt(0);

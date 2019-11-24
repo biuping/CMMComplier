@@ -160,7 +160,7 @@ public class Lexer {
     private int jump_string(int begin, String str){
         if (begin >= str.length())
             return str.length();
-        for (int i = begin+1;i<str.length();i++){
+        for (int i = begin;i<str.length();i++){
             char c = str.charAt(i);
             if (c=='\"')
                 return i;

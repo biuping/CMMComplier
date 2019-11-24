@@ -204,6 +204,8 @@ public class Parse {
         boolean hasIfBrace = true;
         // else语句是否有大括号,默认为true
         boolean hasElseBrace = true;
+        //确保一个if后只能有一个else
+        int elseNum=0;
         //建立if函数根节点
         TreeNode ifTreeNode = new TreeNode("关键字","if",currentToken.getTag(),currentToken.getLineNum());
         nextToken();
@@ -276,31 +278,37 @@ public class Parse {
             if (currentToken != null && currentToken.getTag()==Tag.IF){
                 ifTreeNode.add(elseif_sta());
             }else {
-                TreeNode elseNode = new TreeNode("关键字", "else",currentToken.getTag(), currentToken.getLineNum());
-                ifTreeNode.add(elseNode);
-                // 匹配左大括号{
-                if (currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("{")) {
-                    nextToken();
-                } else {
-                    hasElseBrace = false;
-                }
-                if (hasElseBrace) {
-                    // statement
-                    while (currentToken != null && !currentToken.getContent().equals("}")) {
-                        elseNode.add(statement());
-                    }
-                    // 匹配右大括号}
-                    if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR
-                            && currentToken.getContent().equals("}")) {
+                if (elseNum<1){
+                    TreeNode elseNode = new TreeNode("关键字", "else",Tag.ELSE, currentToken.getLineNum());
+                    ifTreeNode.add(elseNode);
+                    // 匹配左大括号{
+                    if (currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("{")) {
                         nextToken();
                     } else {
-                        PError error = setError("else语句缺少右大括号\"}\"");
-                        elseNode.add(new TreeNode("Error"+errorCount, error.toString()));
+                        hasElseBrace = false;
                     }
-                } else {
-                    if (currentToken != null)
-                        elseNode.add(statement());
+                    if (hasElseBrace) {
+                        // statement
+                        while (currentToken != null && !currentToken.getContent().equals("}")) {
+                            elseNode.add(statement());
+                        }
+                        // 匹配右大括号}
+                        if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR
+                                && currentToken.getContent().equals("}")) {
+                            nextToken();
+                        } else {
+                            PError error = setError("else语句缺少右大括号\"}\"");
+                            elseNode.add(new TreeNode("Error"+errorCount, error.toString()));
+                        }
+                    } else {
+                        if (currentToken != null)
+                            elseNode.add(statement());
+                    }
+                }else {
+                    PError error =setError("if之后只能有一个else语句块");
+                    ifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
                 }
+                elseNum++;
             }
 
         }
@@ -476,11 +484,11 @@ public class Parse {
         TreeNode AD_Node;
         if (currentToken!=null && (currentToken.getTag()==Tag.INT ||
                 currentToken.getTag()==Tag.REAL || currentToken.getTag()==Tag.CHAR)){
-            AD_Node = new TreeNode("declare","Declare",2,currentToken.getLineNum());
+            AD_Node = new TreeNode("declare","Declare",Tag.DECLARE,currentToken.getLineNum());
             AD_Node.add(declare(true));
             forNode.add(AD_Node);
         }else if (currentToken!=null && currentToken.getTag()==Tag.ID){
-            AD_Node = new TreeNode("assign","Assign",3,currentToken.getLineNum());
+            AD_Node = new TreeNode("assign","Assign",Tag.ASSIGN_STA,currentToken.getLineNum());
             AD_Node.add(assign_sta(true));
             forNode.add(AD_Node);
         }else{
@@ -685,7 +693,7 @@ public class Parse {
      * */
     private TreeNode assign_sta(boolean isFor){
         //创建=根结点
-        TreeNode assignNode = new TreeNode("运算符","=",currentToken.getTag(),currentToken.getLineNum());
+        TreeNode assignNode = new TreeNode("运算符","=",Tag.ASSIGN,currentToken.getLineNum());
         TreeNode idNode = new TreeNode("标识符",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
         assignNode.add(idNode);
         nextToken();
