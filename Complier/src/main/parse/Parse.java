@@ -10,7 +10,6 @@ public class Parse {
     private int index = 0;
     private Token currentToken = null;
     private int errorCount=0;
-    private boolean isArray = false;
     //语法树根节点
     private static TreeNode root;
 
@@ -183,14 +182,22 @@ public class Parse {
 
     private TreeNode block_sta(){
         nextToken();
-        TreeNode temp = new TreeNode("代码块","block",4,currentToken.getLineNum());
+        TreeNode temp = new TreeNode("代码块","block",Tag.BLOCK,currentToken.getLineNum());
         temp.add(statement());
-        if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("}")){
-            nextToken();
-        }else {
-            PError error = setError("缺少右括号");
-            temp.add(new TreeNode("Error"+errorCount,error.toString()));
-            nextToken();
+        while (true){
+            if (index<tokens.size()){
+                if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("}")){
+                    nextToken();
+                    break;
+                }else {
+                    temp.add((statement()));
+                }
+            }else {
+                PError error = setError("缺少右括号");
+                temp.add(new TreeNode("Error"+errorCount,error.toString()));
+                break;
+            }
+
         }
         return temp;
     }
@@ -644,23 +651,11 @@ public class Parse {
             PError error = setError("scan之后缺少左括号\"(\"");
             temp .add(new TreeNode("Error"+errorCount,error.toString()));
         }
-        //匹配标识符
-        if (currentToken!=null && currentToken.getTag()==Tag.ID){
-            temp.add(new TreeNode("标识符",currentToken.getContent(),currentToken.getLineNum()));
-            nextToken();
-            if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR &&
-                currentToken.getContent().equals("[")){
-                temp.add(array());
-            }
-        }else if(currentToken != null && currentToken.getTag()==Tag.SEPARATOR &&
-                currentToken.getContent().equals(")")){
-            PError error = setError("scan内缺少内容");
-            temp.add(new TreeNode("Error"+errorCount,error.toString()));
-        }
-        else {
-            PError error = setError("scan内不是标识符，或标识符无法识别");
-            temp.add(new TreeNode("Error"+errorCount,error.toString()));
-            nextToken();
+        Token tempToken = tokens.get(index+1);
+        if (tempToken!=null && !(currentToken.getTag()==Tag.SEPARATOR &&
+                currentToken.getContent().equals(")"))){
+            TreeNode eNode = condition();
+            temp.add(eNode);
         }
         //匹配右括号
         if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR &&
@@ -1123,7 +1118,6 @@ public class Parse {
     private TreeNode array(){
         TreeNode temp;
         if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("[")){
-            isArray=true;
             nextToken();
         }else{
             PError error = setError("缺少左中括号\"[\"");

@@ -34,7 +34,7 @@ public class Token {
     }
 
     public String toString(){
-        return "<"+Tag.getValue(tag)+ content +"···"+"第"+lineNum+"行,第"+col+"列>";
+        return "<"+Tag.getValue(tag)+" " + content +"···"+"第"+lineNum+"行,第"+col+"列>";
     }
 
     public int getTag() {

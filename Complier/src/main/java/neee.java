@@ -42,27 +42,27 @@ public class neee {
     public static void main(String args[]){
 
         String s="";
-        String  a ="c";
-        Scanner scanner = new Scanner(System.in);
-        s=scanner.nextLine();
-        char n = 'c';
+        String  a ="\t";
+//        Scanner scanner = new Scanner(System.in);
+//        s=scanner.nextLine();
+        char n = '\t';
         int aaa=(int)n;
         int i =1;
         double f =1.0;
-        a=a+f;
         int dd[]={2,3};
         n=a.charAt(0);
 
         char d=(char)0;
         double e = f*n;
         boolean b =isInteger(s);
-        if (isESC(s)){
-            d=s.charAt(1);
-        }else
-            d=s.charAt(0);
+//        if (isESC(s)){
+//            d=s.charAt(1);
+//        }else
+//            d=s.charAt(0);
 
-        System.out.println(d);
-        System.out.print(s);
-        System.out.println(a);
+        for (int z=0;z<3;z++){
+            i++;
+        }
+        System.out.println(i);
     }
 }
