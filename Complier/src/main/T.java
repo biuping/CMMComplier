@@ -58,8 +58,11 @@ public class T {
             treeFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             treeFrame.setVisible(true);
 
-            Semantic semantic = new Semantic(root);
-            semantic.run();
+            if (parse.getErrorCount()==0){
+                Semantic semantic = new Semantic(root);
+                semantic.run();
+            }
+
 //            System.out.println(root);
 //            while (root.getChildAt(i)!=null){
 //                System.out.println(root);

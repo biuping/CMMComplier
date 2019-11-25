@@ -51,7 +51,7 @@ public class neee {
         double f =1.0;
         int dd[]={2,3};
         n=a.charAt(0);
-
+        char c = (char)77;
         char d=(char)0;
         double e = f*n;
         boolean b =isInteger(s);
@@ -63,6 +63,6 @@ public class neee {
         for (int z=0;z<3;z++){
             i++;
         }
-        System.out.println(i);
+        System.out.println(c);
     }
 }

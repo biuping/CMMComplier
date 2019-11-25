@@ -136,6 +136,24 @@ public class Semantic {
         }
     }
 
+    //负值节点转换处理
+    private String negativeHandle(TreeNode negNode){
+        String content = negNode.getContent();
+        switch (negNode.getTag()){
+            case Tag.CHAR_S:
+                char c = content.charAt(0);
+                if (isEsc_char(content))
+                    c=content.charAt(1);
+                return String.valueOf(-(int)c);
+            case Tag.TRUE:
+                return "0";
+            case Tag.FALSE:
+                return "1";
+            default:
+                 return "";
+        }
+    }
+
     //输入赋值
     public synchronized void setInput(String input) {
         this.input = input;
@@ -333,7 +351,8 @@ public class Semantic {
                             return;
                         }
                     } else if (arrayTag == Tag.ADD || arrayTag == Tag.SUB
-                            || arrayTag == Tag.MUL || arrayTag == Tag.DIVIDE) {
+                            || arrayTag == Tag.MUL || arrayTag == Tag.DIVIDE
+                            || arrayTag==Tag.NEG || arrayTag==Tag.POS) {
                         ExpressionPart part = expression_analyze(child.getChildAt(0));
                         if (part != null) {
                             if (part.isInt()) {
@@ -353,31 +372,6 @@ public class Semantic {
                     }
                     symbol.setArraySize(Integer.parseInt(sizeValue));
                     table.addSymbol(symbol);
-                    //默认值
-                    for (int i=0;i<Integer.parseInt(sizeValue);i++){
-                        String itemName = child.getContent() + "@" + i;
-                        Symbol itemSymbol = new Symbol(itemName, root.getTag(),
-                                child.getLineNum(), level);
-                        switch (tag){
-                            case Tag.INT:
-                                itemSymbol.setIntValue(String.valueOf(Integer.MIN_VALUE));
-                                itemSymbol.setRealValue(String.valueOf(Integer.MIN_VALUE));
-                                break;
-                            case Tag.REAL:
-                                itemSymbol.setRealValue(String.valueOf(Double.MIN_VALUE));
-                                break;
-                            case Tag.CHAR:
-                                itemSymbol.setCharValue(String.valueOf(Character.MIN_VALUE));
-                                break;
-                            case Tag.BOOL:
-                                itemSymbol.setBoolValue("0");
-                                break;
-                            case Tag.STRING:
-                                itemSymbol.setStringValue(String.valueOf(Character.MIN_VALUE));
-                                break;
-                        }
-                        table.addSymbol(itemSymbol);
-                    }
                     index++;
                     if (index < root.getChildCount() &&
                             root.getChildAt(index).getTag() == Tag.ASSIGN) {
@@ -436,6 +430,32 @@ public class Semantic {
                             ++index;
                             setError("数组大小超过声明大小",root.getLineNum());
                             return;
+                        }
+                    }else {
+                        //默认值
+                        for (int i=0;i<Integer.parseInt(sizeValue);i++){
+                            String itemName = child.getContent() + "@" + i;
+                            Symbol itemSymbol = new Symbol(itemName, root.getTag(),
+                                    child.getLineNum(), level);
+                            switch (tag){
+                                case Tag.INT:
+                                    itemSymbol.setIntValue(String.valueOf(Integer.MIN_VALUE));
+                                    itemSymbol.setRealValue(String.valueOf(Integer.MIN_VALUE));
+                                    break;
+                                case Tag.REAL:
+                                    itemSymbol.setRealValue(String.valueOf(Double.MIN_VALUE));
+                                    break;
+                                case Tag.CHAR:
+                                    itemSymbol.setCharValue(String.valueOf(Character.MIN_VALUE));
+                                    break;
+                                case Tag.BOOL:
+                                    itemSymbol.setBoolValue("0");
+                                    break;
+                                case Tag.STRING:
+                                    itemSymbol.setStringValue(String.valueOf(Character.MIN_VALUE));
+                                    break;
+                            }
+                            table.addSymbol(itemSymbol);
                         }
                     }
                     index++;
@@ -525,9 +545,15 @@ public class Semantic {
                 } else
                     return null;
             } else if (valueNode.getTag() == Tag.ADD || valueNode.getTag() == Tag.SUB
-                    || valueNode.getTag() == Tag.MUL || valueNode.getTag() == Tag.DIVIDE) {
+                    || valueNode.getTag() == Tag.MUL || valueNode.getTag() == Tag.DIVIDE
+                    || valueNode.getTag()==Tag.NEG ||valueNode.getTag()==Tag.POS) {
                 ExpressionPart part = expression_analyze(valueNode);
-                String result = part.getResult();
+                String result;
+                if (part==null){
+                    return null;
+                }else {
+                    result = part.getResult();
+                }
                 if (result != null) {
                     if (isInteger(result) && part.isInt()) {
                         symbol.setIntValue(result);
@@ -611,9 +637,15 @@ public class Semantic {
                 } else
                     return null;
             } else if (valueNode.getTag() == Tag.ADD || valueNode.getTag() == Tag.SUB
-                    || valueNode.getTag() == Tag.MUL || valueNode.getTag() == Tag.DIVIDE) {
+                    || valueNode.getTag() == Tag.MUL || valueNode.getTag() == Tag.DIVIDE
+                    || valueNode.getTag()==Tag.NEG ||valueNode.getTag()==Tag.POS) {
                 ExpressionPart part = expression_analyze(valueNode);
-                String result = part.getResult();
+                String result;
+                if (part==null){
+                    return null;
+                }else {
+                    result = part.getResult();
+                }
                 if (result != null) {
                     if (isInteger(result) && part.isInt()) {
                         symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
@@ -695,7 +727,8 @@ public class Semantic {
                     symbol.setCharValue(String.valueOf(0));
                 }
             } else if (valueNode.getTag() == Tag.ADD || valueNode.getTag() == Tag.SUB
-                    || valueNode.getTag() == Tag.MUL || valueNode.getTag() == Tag.DIVIDE) {
+                    || valueNode.getTag() == Tag.MUL || valueNode.getTag() == Tag.DIVIDE
+                    || valueNode.getTag()==Tag.NEG ||valueNode.getTag()==Tag.POS) {
                 ExpressionPart exp = expression_analyze(valueNode);
                 assert exp != null;
                 if (exp.getTag() == Tag.INT) {
@@ -738,7 +771,10 @@ public class Semantic {
                     return null;
             } else if (valueNode.getTag() == Tag.ADD) {
                 ExpressionPart part = expression_analyze(valueNode);
-                symbol.setStringValue(part.getResult());
+                if (part!=null)
+                    symbol.setStringValue(part.getResult());
+                else
+                    return null;
             } else {
                 setError("除加法之外的运算表达式不能赋值给string型变量", valueNode.getLineNum());
             }
@@ -830,7 +866,8 @@ public class Semantic {
                 } else
                     return null;
             } else if (valueNode.getTag() == Tag.ADD || valueNode.getTag() == Tag.SUB
-                    || valueNode.getTag() == Tag.MUL || valueNode.getTag() == Tag.DIVIDE) {
+                    || valueNode.getTag() == Tag.MUL || valueNode.getTag() == Tag.DIVIDE
+                    || valueNode.getTag()==Tag.NEG ||valueNode.getTag()==Tag.POS) {
                 ExpressionPart exp = expression_analyze(valueNode);
                 assert exp != null;
                 if (exp.getTag() == Tag.STRING) {
@@ -1179,7 +1216,8 @@ public class Semantic {
                     } else
                         return false;
                 } else if (childTag == Tag.ADD || childTag == Tag.SUB
-                        || childTag == Tag.MUL || childTag == Tag.DIVIDE) {
+                        || childTag == Tag.MUL || childTag == Tag.DIVIDE
+                        || childTag==Tag.NEG || childTag==Tag.POS) {
                     ExpressionPart exp = expression_analyze(root.getChildAt(i));
                     if (exp != null)
                         children[i] = new Element(exp.getTag(), exp.getResult());
@@ -1556,17 +1594,24 @@ public class Semantic {
     private ExpressionPart expression_analyze(TreeNode root) {
         int rootTag = root.getTag();
         boolean isNegative = false;
+        boolean isNP=false;   //正负号
         ExpressionPart part = new ExpressionPart();
         for (int i = 0; i < root.getChildCount(); i++) {
             TreeNode temp = root.getChildAt(i);
+            //声明语句或赋值语句处理正负号时，传入的root为正负结点，更改temp为root
+            if (rootTag==Tag.NEG||rootTag==Tag.POS){
+                temp = root;
+            }
             int tag = temp.getTag();
             String tempContent = temp.getContent();
             //处理正负号
             if (tag==Tag.POS){
+                isNP=true;
                 temp=temp.getChildAt(0);
                 tag=temp.getTag();
                 tempContent=temp.getContent();
             }else if (tag==Tag.NEG){
+                isNP=true;
                 temp=temp.getChildAt(0);
                 tag=temp.getTag();
                 isNegative=true;
@@ -1578,36 +1623,69 @@ public class Semantic {
                 part.setChild(tempContent, i);
                 part.setIsInt(false);
             }else if (tag==Tag.TRUE){
-                part.setChild("1", i);
+                if (isNegative)
+                    part.setChild(negativeHandle(temp),i);
+                else
+                    part.setChild("1", i);
             }else if (tag==Tag.FALSE){
-                part.setChild("0", i);
+                if (isNegative)
+                    part.setChild(negativeHandle(temp),i);
+                else
+                    part.setChild("0", i);
             } else if (tag == Tag.CHAR_S) {
                 //将char转成int计算,int要转成string才能存入children数组
-                char c = tempContent.charAt(0);
-                if (isEsc_char(tempContent)){
-                    c=tempContent.charAt(1);
+                if (isNegative)
+                    part.setChild(negativeHandle(temp), i);
+                else {
+                    char c = tempContent.charAt(0);
+                    if (isEsc_char(tempContent)){
+                        c=tempContent.charAt(1);
+                    }
+                    int cToi = (int) c;
+                    part.setChild(String.valueOf(cToi), i);
                 }
-                int cToi = (int) c;
-                part.setChild(String.valueOf(cToi), i);
             } else if (tag == Tag.STR) {
+                if (isNegative){
+                    setError("字符串不允许正负号运算",temp.getLineNum());
+                    return null;
+                }
                 part.setIsString(true);
                 part.setChild(tempContent, i);
             }else if (tag==Tag.SCAN){
                 String input = scan_analyze(temp);
                 if (input!=null){
                     if (isInteger(input)){
-                        part.setChild(input,i);
+                        if (isNegative)
+                            part.setChild(String.valueOf(-Integer.parseInt(input)),i);
+                        else
+                            part.setChild(input,i);
                     }else if (isReal(input)){
+                        if (isNegative)
+                            part.setChild(String.valueOf(-Double.parseDouble(input)),i);
+                        else
+                            part.setChild(input,i);
                         part.setIsInt(false);
-                        part.setChild(input,i);
                     }else if (input.length()==1){
                         int c = (int)input.charAt(0);
-                        part.setChild(String.valueOf(c),i);
+                        if (isNegative)
+                            part.setChild(String.valueOf(-c),i);
+                        else
+                            part.setChild(String.valueOf(c),i);
                     }else if (input.equals("true")){
-                        part.setChild("1",i);
+                        if (isNegative)
+                            part.setChild("0",i);
+                        else
+                            part.setChild("1",i);
                     }else if (input.equals("false")){
-                        part.setChild("0",i);
+                        if (isNegative)
+                            part.setChild("1",i);
+                        else
+                            part.setChild("0",i);
                     }else {
+                        if (isNegative){
+                            setError("scan输入为字符串，不允许正负号操作",temp.getLineNum());
+                            return null;
+                        }
                         part.setChild(input,i);
                         part.setIsString(true);
                     }
@@ -1672,7 +1750,11 @@ public class Semantic {
                 }
             } else if (tag == Tag.ADD || tag == Tag.SUB
                     || tag == Tag.MUL || tag == Tag.DIVIDE) {
-                ExpressionPart exp = expression_analyze(root.getChildAt(i));
+                ExpressionPart exp;
+                if (isNP)
+                    exp = expression_analyze(root.getChildAt(i).getChildAt(0));
+                else
+                    exp = expression_analyze(root.getChildAt(i));
                 if (exp != null) {
                     part.setChild(exp.getResult(), i);
                     if (exp.getTag() == Tag.REAL)
@@ -1687,6 +1769,11 @@ public class Semantic {
                 } else
                     part.setChild("0", i);
             }
+        }
+        if (root.getChildCount()==1 &&
+                (rootTag==Tag.NEG || rootTag==Tag.POS)){
+            part.setResult(part.getChild1());
+            return part;
         }
         if (part.getTag() == Tag.INT) {
             int child1 = Integer.parseInt(part.getChild1());

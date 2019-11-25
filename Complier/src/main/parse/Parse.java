@@ -145,15 +145,7 @@ public class Parse {
         }
         //赋值语句
         else if (currentToken!=null && currentToken.getTag()==Tag.ID){
-//            temp=assign_sta(false);
-            nextToken();
-            if (currentToken!=null && currentToken.getTag()==Tag.ASSIGN){
-                lastToken();
-                temp=assign_sta(false);
-            }else{
-                lastToken();
-                temp=conditionTop();
-            }
+            temp=assign_sta(false);
         }else if (currentToken!=null && (currentToken.getTag()==Tag.INTNUM||currentToken.getTag()==Tag.CHAR_S||
                 currentToken.getTag()==Tag.REALNUM || currentToken.getTag()==Tag.STR)){
             temp=conditionTop();
@@ -688,6 +680,8 @@ public class Parse {
      *    ID or array    condition
      * */
     private TreeNode assign_sta(boolean isFor){
+        //记录进入时的index
+        int i = index;
         //创建=根结点
         TreeNode assignNode = new TreeNode("运算符","=",Tag.ASSIGN,currentToken.getLineNum());
         TreeNode idNode = new TreeNode("标识符",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
@@ -700,7 +694,7 @@ public class Parse {
         }
 
         if (currentToken!=null && (currentToken.getTag()==Tag.SEPARATOR
-            && !currentToken.getContent().equals("["))){
+            && (!currentToken.getContent().equals("[") && !currentToken.getContent().equals(";") ))){
             PError error = setError("标识符之后出现错误分割符"+currentToken.getContent());
             idNode.add(new TreeNode("Error"+errorCount,error.toString()));
             nextToken();
@@ -710,7 +704,17 @@ public class Parse {
         if (currentToken!=null && currentToken.getTag() == Tag.ASSIGN){
             //因为根结点已经默认设置了，所以直接扫描下一个token
             nextToken();
-        }else {
+        }else if (currentToken!=null &&
+                ((currentToken.getTag()>=267 && currentToken.getTag()<=282)||
+                        (currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")))){
+            //非赋值情况，没有=的运算
+            while (i<index){
+                //回退到进入token位置
+                lastToken();
+            }
+            return conditionTop();
+        }
+        else {
             PError error = setError("赋值语句缺少赋值符号\"=\"");
             assignNode.add(new TreeNode("Error"+errorCount,error.toString()));
             return assignNode;
