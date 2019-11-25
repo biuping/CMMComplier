@@ -15,6 +15,7 @@ public class Semantic {
     private TreeNode root;
     // 语义分析错误个数
     private int errorNum = 0;
+
     // 语义分析标识符作用域
     private int level = 0;
     //scan输入
@@ -24,6 +25,14 @@ public class Semantic {
 
     public Semantic(TreeNode root) {
         this.root = root;
+    }
+
+    public int getErrorNum() {
+        return errorNum;
+    }
+
+    public ArrayList<SError> getErrors() {
+        return errors;
     }
 
     private void setError(String reason, int line) {
@@ -179,12 +188,16 @@ public class Semantic {
     public void run() {
         table.removeAll();
         System.out.println("=========语义分析=========");
-        statement(root);
-
-        if (errorNum!=0){
-            System.out.println("该程序中共有" + errorNum + "个语义错误！");
-            for (int i = 0;i<errors.size();i++){
-                System.out.println(errors.get(i).toString());
+        try {
+            statement(root);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }finally {
+            if (errorNum!=0){
+                System.out.println("该程序中共有" + errorNum + "个语义错误！");
+                for (int i = 0;i<errors.size();i++){
+                    System.out.println(errors.get(i).toString());
+                }
             }
         }
     }
@@ -493,7 +506,7 @@ public class Semantic {
                 symbol.setIntValue(String.valueOf(0));
                 symbol.setRealValue(String.valueOf((double)0));
             }else if (valueNode.getTag()==Tag.SCAN){
-                String input = scan_analyze(valueNode);
+                String input = scan_analyze(valueNode,symbol.getName());
                 if (input!=null){
                     if (isInteger(input)){
                         symbol.setIntValue(String.valueOf(Integer.parseInt(input)));
@@ -581,7 +594,7 @@ public class Semantic {
         } else if (tag == Tag.REAL) {  //real 声明
             if (valueNode.getTag() == Tag.INTNUM) {
                 symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
-            } else if (valueNode.getTag() == Tag.REAL) {
+            } else if (valueNode.getTag() == Tag.REALNUM) {
                 symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
             } else if (valueNode.getTag() == Tag.CHAR_S) {
                 char c ;
@@ -597,7 +610,7 @@ public class Semantic {
             else if ( valueNode.getTag() == Tag.FALSE)
                 symbol.setRealValue("0");
             else if (valueNode.getTag()==Tag.SCAN){
-                String input = scan_analyze(valueNode);
+                String input = scan_analyze(valueNode,symbol.getName());
                 if (input!=null){
                     if (isInteger(input)){
                         symbol.setRealValue(String.valueOf(Double.parseDouble(input)));
@@ -677,7 +690,7 @@ public class Semantic {
             else if (valueNode.getTag() == Tag.STR)
                 setError("不能将string字符串赋值给char型变量", valueNode.getLineNum());
             else if (valueNode.getTag()==Tag.SCAN){
-                String input = scan_analyze(valueNode);
+                String input = scan_analyze(valueNode,symbol.getName());
                 if (input!=null){
                     if (isInteger(input)){
                         int i = Integer.parseInt(input);
@@ -749,7 +762,7 @@ public class Semantic {
             else if (valueNode.getTag() == Tag.TRUE || valueNode.getTag() == Tag.FALSE)
                 setError("不能将布尔值赋值给string型变量", valueNode.getLineNum());
             else if (valueNode.getTag()==Tag.SCAN){
-                String input = scan_analyze(valueNode);
+                String input = scan_analyze(valueNode,symbol.getName());
                 if (input!=null){
                     symbol.setStringValue(input);
                 }
@@ -806,7 +819,7 @@ public class Semantic {
             else if (valueNode.getTag() == Tag.FALSE)
                 symbol.setBoolValue("0");
             else if (valueNode.getTag()==Tag.SCAN){
-                String input = scan_analyze(valueNode);
+                String input = scan_analyze(valueNode,symbol.getName());
                 if (input!=null){
                     if (isInteger(input)){
                         int i = Integer.parseInt(input);
@@ -972,7 +985,7 @@ public class Semantic {
                     else
                         System.out.println(symbol.getCharValue());
                 }else if (symbol.getTag()==Tag.BOOL){
-                    if (symbol.getBoolValue().equals("0"))
+                    if (symbol.getBoolValue().equals("0") || symbol.getBoolValue().equals("false"))
                         System.out.println("false");
                     else
                         System.out.println("true");
@@ -987,7 +1000,8 @@ public class Semantic {
         }else if (tag==Tag.ADD || tag==Tag.SUB ||
                 tag==Tag.MUL ||tag==Tag.DIVIDE){
             ExpressionPart exp = expression_analyze(root);
-            System.out.println(exp.getResult());
+            if (exp!=null)
+                System.out.println(exp.getResult());
         }else if (tag == Tag.EQ || tag == Tag.LE || tag == Tag.GE || tag == Tag.UE
                 || tag == Tag.LESS || tag == Tag.GREATER ||
                 tag == Tag.AND || tag == Tag.OR){
@@ -1049,9 +1063,10 @@ public class Semantic {
      * @param root
      * while节点
      */
-    private String scan_analyze(TreeNode root){
+    private String scan_analyze(TreeNode root,String name){
         String input = "";
         if (root.getChildCount()==0){
+            System.out.print("输入"+name+":");
             Scanner scanner = new Scanner(System.in);
             input = scanner.nextLine();
             return input;
@@ -1118,9 +1133,9 @@ public class Semantic {
                 c = content.charAt(0);
             int i = (int) c;
             return i != 0;
-        } else if (root.getTag() == Tag.TRUE) {
+        } else if (tag == Tag.TRUE) {
             return true;
-        } else if (root.getTag() == Tag.FALSE) {
+        } else if (tag == Tag.FALSE) {
             return false;
         } else if (tag == Tag.ID) {
             if (checkID(root, level)) {
@@ -1217,12 +1232,30 @@ public class Semantic {
                         return false;
                 } else if (childTag == Tag.ADD || childTag == Tag.SUB
                         || childTag == Tag.MUL || childTag == Tag.DIVIDE
-                        || childTag==Tag.NEG || childTag==Tag.POS) {
+                        || childTag==Tag.NEG || childTag==Tag.POS ) {
                     ExpressionPart exp = expression_analyze(root.getChildAt(i));
                     if (exp != null)
                         children[i] = new Element(exp.getTag(), exp.getResult());
                     else
                         return false;
+                } else if (childTag==Tag.SCAN) {
+                    String input = scan_analyze(root.getChildAt(i),"");
+                    if (input != null) {
+                        if (isInteger(input)) {
+                            children[i]=new Element(Tag.INT,input);
+                        } else if (isReal(input)) {
+                            children[i]=new Element(Tag.REAL,input);
+                        } else if (input.length() == 1) {
+                            int c = (int) input.charAt(0);
+                            children[i]=new Element(Tag.INT,String.valueOf(c));
+                        } else if (input.equals("true")) {
+                            children[i]=new Element(Tag.INT,"1");
+                        } else if (input.equals("false")) {
+                            children[i]=new Element(Tag.INT,"0");
+                        }else {
+                            children[i]=new Element(Tag.STRING,input);
+                        }
+                    }
                 }
             }
             if (children[0] != null && children[1] != null) {
@@ -1499,7 +1532,8 @@ public class Semantic {
             }
         }
         else if (root.getTag() == Tag.SCAN){
-            String input = scan_analyze(root);
+            TreeNode parent = (TreeNode) root.getParent();
+            String input = scan_analyze(root,parent.getContent());
             if (input!=null){
                 if (isInteger(input)){
                     int arrayIndex = Integer.parseInt(input);
@@ -1652,7 +1686,7 @@ public class Semantic {
                 part.setIsString(true);
                 part.setChild(tempContent, i);
             }else if (tag==Tag.SCAN){
-                String input = scan_analyze(temp);
+                String input = scan_analyze(temp,"");
                 if (input!=null){
                     if (isInteger(input)){
                         if (isNegative)
@@ -1713,7 +1747,7 @@ public class Semantic {
                         if (isNegative)
                             part.setChild(String.valueOf(-Double.parseDouble(symbol.getIntValue())), i);
                         else
-                            part.setChild(symbol.getIntValue(), i);
+                            part.setChild(symbol.getRealValue(), i);
                         part.setIsInt(false);
                     } else if (symbol.getTag() == Tag.CHAR) {
                         String s = symbol.getCharValue();
@@ -1742,7 +1776,7 @@ public class Semantic {
                             setError("字符串不存在负操作",temp.getLineNum());
                             return null;
                         }
-                        part.setChild(symbol.getIntValue(), i);
+                        part.setChild(symbol.getStringValue(), i);
                         part.setIsString(true);
                     }
                 } else {
