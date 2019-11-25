@@ -392,7 +392,13 @@ public class Lexer {
                                     tokens.add(token);
                                     index--;
                                     flag=0;
-                                }else {
+                                }else if (c<'0' || c>'9'){
+                                    Token token = new Token(Tag.NEG,"-",lineNum,index+1);
+                                    tokens.add(token);
+                                    index--;
+                                    flag=0;
+                                }
+                                else {
                                     isNegative=true;
                                     begin=index-1;
                                     flag=2;
@@ -544,7 +550,13 @@ public class Lexer {
                                 }else if (String.valueOf(c).equals("\n")){
                                     Error error = new Error("+","错误",lineNum,index+1);
                                     errors.add(error);
-                                }else {
+                                }else if (c<'0'||c>'9'){
+                                    Token token = new Token(Tag.POS,"+",lineNum,index+1);
+                                    tokens.add(token);
+                                    index--;
+                                    flag=0;
+                                }
+                                else {
                                     isPositive=true;
                                     begin=index-1;
                                     flag=2;

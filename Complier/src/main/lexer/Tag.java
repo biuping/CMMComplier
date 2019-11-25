@@ -22,14 +22,14 @@ public class Tag {
                             SUB=267, MUL=268, DIVIDE=269, ASSIGN =270, LESS=271, GREATER=272,
                             UE=273,  EQ=274, GE=275, LE=276,OR=278,AND=279,ADD=280,BAND=281,BOR=282,
                             INTNUM=283,REALNUM=284, CHAR_S=285, STR =286,
-                            SEPARATOR =287,ID=288;
+                            SEPARATOR =287,ID=288,NEG=289,POS=290;
 
 
 
     public static String getValue(int i){
         if (i>=252 && i<=266)
             return "关键字";
-        else if (i>=267 && i<=282)
+        else if (i>=267 && i<=282 )
             return "运算符";
         else if (i==283)
             return "整数";
@@ -43,6 +43,10 @@ public class Tag {
             return "标识符";
         else if (i==286)
             return "字符串";
+        else if (i==289)
+            return "负号";
+        else if (i==290)
+            return "正号";
         else
             return "";
     }

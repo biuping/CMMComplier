@@ -145,6 +145,7 @@ public class Parse {
         }
         //赋值语句
         else if (currentToken!=null && currentToken.getTag()==Tag.ID){
+//            temp=assign_sta(false);
             nextToken();
             if (currentToken!=null && currentToken.getTag()==Tag.ASSIGN){
                 lastToken();
@@ -987,16 +988,8 @@ public class Parse {
      * (加减运算符 乘除表达式)可能出现多次
      * */
     private TreeNode expression(){
-        TreeNode temp =null;
-        boolean b = false;
-        if (currentToken != null && (currentToken.getTag()==Tag.ADD
-                || currentToken.getTag()==Tag.SUB)) {
-            TreeNode asNode = as_op();
-            temp=asNode;
-            temp.add(mdexperssion());
-            b=true;
-        }else
-            temp = mdexperssion();
+        TreeNode temp =mdexperssion();
+
         /**
          *  树：
          *           +or-
@@ -1075,6 +1068,12 @@ public class Parse {
             //下一个双引号
             nextToken();
             nextToken();
+        }else if (currentToken!=null &&
+                (currentToken.getTag()==Tag.NEG || currentToken.getTag()==Tag.POS)){
+            temp=new TreeNode("正负号",currentToken.getContent(),currentToken.getTag(),
+                    currentToken.getLineNum());
+            nextToken();
+            temp.add(factor());
         }
         else if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("(")){
             //匹配(表达式)情况
