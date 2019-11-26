@@ -1,5 +1,6 @@
 package main.semantic;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import main.lexer.Tag;
 import main.parse.TreeNode;
 
@@ -306,6 +307,73 @@ public class Semantic {
             return false;
         }
     }
+    
+    private int getArraySize(TreeNode root){
+        int count = root.getChildCount();  //数组维度
+        int size = 0;
+        for (int i=0;i<count;i++){
+            int tag = root.getChildAt(i).getTag();
+            if (tag==Tag.INTNUM){
+                int v = Integer.parseInt(root.getChildAt(i).getContent());
+                if (v<1){
+                    setError("数组大小必须大于0",root.getLineNum());
+                    return Integer.MIN_VALUE;
+                }else 
+                    size*=v;
+            }
+            else if (tag==Tag.ID){
+                if (checkID(root,level)){
+                    Symbol tempSymbol = table.getAllLevel(root.getChildAt(i).getContent(), level);
+                    if (tempSymbol.getTag()==Tag.INT){
+                        int v = Integer.parseInt(tempSymbol.getIntValue());
+                        if (v<=0){
+                            setError("数组大小必须大于0",root.getLineNum());
+                            return Integer.MIN_VALUE;
+                        }else
+                            size*=v;
+                    }
+                    else if (tempSymbol.getTag()== Tag.BOOL){
+                        if (tempSymbol.getBoolValue().equals("false") || tempSymbol.getBoolValue().equals("0")){
+                            setError("数组大小必须大于0",root.getLineNum());
+                            return Integer.MIN_VALUE;
+                        }
+                    }else if (tempSymbol.getTag()==Tag.CHAR){
+                        int c = (int)tempSymbol.getCharValue().charAt(0);
+                        if (isEsc_char(tempSymbol.getCharValue()))
+                            c=(int)tempSymbol.getCharValue().charAt(1);
+                        if (c<=0){
+                            setError("数组大小必须大于0",root.getLineNum());
+                            return Integer.MIN_VALUE;
+                        }
+                        size*=c;
+                    }else {
+                        setError("数组下标类型不正确",root.getLineNum());
+                        return Integer.MIN_VALUE;
+                    }
+                }
+            }else if (tag == Tag.ADD || tag == Tag.SUB
+                    || tag == Tag.MUL || tag == Tag.DIVIDE
+                    || tag==Tag.NEG || tag==Tag.POS) {
+                ExpressionPart part = expression_analyze(root.getChildAt(i));
+                if (part != null) {
+                    if (part.isInt()) {
+                        int result = Integer.parseInt(part.getResult());
+                        if (result < 1) {
+                            setError("数组大小必须大于0", root.getLineNum());
+                            return Integer.MIN_VALUE;
+                        } else {
+                            size*=result;
+                        }
+                    } else {
+                        setError("数组下标类型不正确", root.getLineNum());
+                        return Integer.MIN_VALUE;
+                    }
+                } else
+                    return Integer.MIN_VALUE;
+            }
+        }
+        return size;
+    }
 
     /**
      * 声明代码段语义分析
@@ -339,6 +407,10 @@ public class Semantic {
                     Symbol symbol = new Symbol(name, root.getTag(), child.getLineNum(), level);
                     int arrayTag = child.getChildAt(0).getTag();
                     String sizeValue = child.getChildAt(0).getContent();
+                    int size = getArraySize(child);
+                    if (size==Integer.MIN_VALUE)
+                        return;
+                    /**
                     if (arrayTag == Tag.INTNUM) {
                         int arraySize = Integer.parseInt(sizeValue);
                         if (arraySize < 1) {
@@ -383,14 +455,15 @@ public class Semantic {
                         } else
                             return;
                     }
-                    symbol.setArraySize(Integer.parseInt(sizeValue));
+                     **/
+                    symbol.setArraySize(size);
                     table.addSymbol(symbol);
                     index++;
                     if (index < root.getChildCount() &&
                             root.getChildAt(index).getTag() == Tag.ASSIGN) {
                         TreeNode items = root.getChildAt(index).getChildAt(0);
                         int count = items.getChildCount();
-                        if (count <= Integer.parseInt(sizeValue)) {
+                        if (count <= size) {
                             for (int j = 0; j < count; j++) {
                                 //大括号声明的数组元素
                                 TreeNode item = items.getChildAt(j);  //赋值的值结点
@@ -404,30 +477,31 @@ public class Semantic {
                                 else
                                     table.addSymbol(itemSymbol);
                             }
-                            if (count<Integer.parseInt(sizeValue)){
-                                for (int j = count;j<Integer.parseInt(sizeValue);j++){
+                            if (count<size){
+                                for (int j = count;j<size;j++){
                                     TreeNode item = new TreeNode();
                                     switch (tag){
                                         case Tag.INT:
                                             item.setTag(Tag.INTNUM);
+                                            item.setContent(String.valueOf(Integer.MIN_VALUE));
                                             break;
                                         case Tag.REAL:
                                             item.setTag(Tag.REALNUM);
+                                            item.setContent(String.valueOf(Double.MIN_VALUE));
                                             break;
                                         case Tag.CHAR:
                                             item.setTag(Tag.CHAR_S);
+                                            item.setContent(String.valueOf(Character.MIN_VALUE));
                                             break;
                                         case Tag.BOOL:
                                             item.setTag(Tag.FALSE);
+                                            item.setContent("0");
                                             break;
                                         case Tag.STRING:
                                             item.setTag(Tag.STR);
+                                            item.setContent("");
                                             break;
                                     }
-                                    if (tag==Tag.STRING)
-                                        item.setContent("");
-                                    else
-                                        item.setContent("0");
                                     item.setLineNum(root.getLineNum());
                                     String itemName = child.getContent() + "@" + j;
                                     Symbol itemSymbol = new Symbol(itemName,root.getTag(),items.getLineNum(), level);
@@ -446,7 +520,7 @@ public class Semantic {
                         }
                     }else {
                         //默认值
-                        for (int i=0;i<Integer.parseInt(sizeValue);i++){
+                        for (int i=0;i<size;i++){
                             String itemName = child.getContent() + "@" + i;
                             Symbol itemSymbol = new Symbol(itemName, root.getTag(),
                                     child.getLineNum(), level);
@@ -1497,6 +1571,7 @@ public class Semantic {
      * @return 出错返回null
      */
     private String array_analyze(TreeNode root, int arraySize) {
+        //TODO  怎么判断多维数组越界 现在得到的arraySize是相乘的大小
         if (root.getTag() == Tag.INTNUM) {
             int arrayIndex = Integer.parseInt(root.getContent());//数组下标
             if (arrayIndex > -1 && arrayIndex < arraySize) {

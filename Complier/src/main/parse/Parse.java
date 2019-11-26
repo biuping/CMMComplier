@@ -690,7 +690,7 @@ public class Parse {
 
         if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR &&
                 currentToken.getContent().equals("[")){
-            idNode.add(array());
+            array(idNode);
         }
 
         if (currentToken!=null && (currentToken.getTag()==Tag.SEPARATOR
@@ -789,7 +789,7 @@ public class Parse {
 
             if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR &&
                     currentToken.getContent().equals("[")){
-                idNode.add(array());
+                array(idNode);
                 isArray=true;
             }else if (currentToken!=null
                     && !currentToken.getContent().equals(";") && !currentToken.getContent().equals(",")
@@ -1057,7 +1057,7 @@ public class Parse {
             //数组情况
             if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR
                     && currentToken.getContent().equals("[")){
-                temp.add(array());
+                array(temp);
             }
         }else if (currentToken !=null && currentToken.getTag()==Tag.TRUE){
             temp = new TreeNode("布尔值", "true",currentToken.getTag(), currentToken.getLineNum());
@@ -1118,31 +1118,29 @@ public class Parse {
      * 数组
      * 格式：[表达式]
      * */
-    private TreeNode array(){
-        TreeNode temp;
+    private void array(TreeNode root){
         if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("[")){
-            nextToken();
+            while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("[")){
+                nextToken();
+                if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("]")){
+                    root.add(new TreeNode("undefined","Undefined",4,currentToken.getLineNum()));
+                    nextToken();
+                } else {
+                    //分析中括号中的表达式
+                    root.add(expression());
+                    //检测右中括号
+                    if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("]")){
+                        nextToken();
+                    }else {
+                        PError error = setError("缺少右中括号\"]\"");
+                        root.add(new TreeNode("Error"+errorCount,error.toString()));
+                    }
+                }
+            }
         }else{
             PError error = setError("缺少左中括号\"[\"");
-            return new TreeNode("Error"+errorCount,error.toString());
+            root.add(new TreeNode("Error"+errorCount,error.toString()));
         }
-
-        if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("]")){
-            temp = new TreeNode("undefined","Undefined",4,currentToken.getLineNum());
-            nextToken();
-        } else {
-            //分析中括号中的表达式
-            temp = expression();
-            //检测右中括号
-            if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("]")){
-                nextToken();
-            }else {
-                PError error = setError("缺少右中括号\"]\"");
-                return new TreeNode("Error"+errorCount,error.toString());
-            }
-        }
-
-        return temp;
     }
 
     /**
