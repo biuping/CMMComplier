@@ -20,7 +20,7 @@ public class Symbol {
     // bool
     private String boolValue;
     // 是否为数组,0表示不是,正整数表示数组的大小
-    private int arraySize;
+    private int[] arraySize;
 
     public Symbol(String name,int tag,int lineNum, int level){
         this.name = name;
@@ -30,7 +30,7 @@ public class Symbol {
         this.intValue = "";
         this.realValue = "";
         this.stringValue = "";
-        this.arraySize = 0;
+        this.arraySize = new int[]{};
         this.charValue = "";
         this.boolValue = "";
     }
@@ -99,11 +99,11 @@ public class Symbol {
         this.stringValue = stringValue;
     }
 
-    public int getArraySize() {
+    public int[] getArraySize() {
         return arraySize;
     }
 
-    public void setArraySize(int arraySize) {
+    public void setArraySize(int[] arraySize) {
         this.arraySize = arraySize;
     }
 

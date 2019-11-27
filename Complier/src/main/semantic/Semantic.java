@@ -1,6 +1,5 @@
 package main.semantic;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import main.lexer.Tag;
 import main.parse.TreeNode;
 
@@ -307,19 +306,21 @@ public class Semantic {
             return false;
         }
     }
-    
-    private int getArraySize(TreeNode root){
+
+    //得到数组下标数组
+    private int[] getArraySize(TreeNode root){
         int count = root.getChildCount();  //数组维度
-        int size = 0;
+        int[] size = new int[count];
         for (int i=0;i<count;i++){
             int tag = root.getChildAt(i).getTag();
             if (tag==Tag.INTNUM){
                 int v = Integer.parseInt(root.getChildAt(i).getContent());
                 if (v<1){
                     setError("数组大小必须大于0",root.getLineNum());
-                    return Integer.MIN_VALUE;
-                }else 
-                    size*=v;
+                    size[0]=Integer.MIN_VALUE;
+                    break;
+                }else
+                    size[i]=v;
             }
             else if (tag==Tag.ID){
                 if (checkID(root,level)){
@@ -328,14 +329,16 @@ public class Semantic {
                         int v = Integer.parseInt(tempSymbol.getIntValue());
                         if (v<=0){
                             setError("数组大小必须大于0",root.getLineNum());
-                            return Integer.MIN_VALUE;
+                            size[0]=Integer.MIN_VALUE;
+                            break;
                         }else
-                            size*=v;
+                            size[i]=v;
                     }
                     else if (tempSymbol.getTag()== Tag.BOOL){
                         if (tempSymbol.getBoolValue().equals("false") || tempSymbol.getBoolValue().equals("0")){
                             setError("数组大小必须大于0",root.getLineNum());
-                            return Integer.MIN_VALUE;
+                            size[0]=Integer.MIN_VALUE;
+                            break;
                         }
                     }else if (tempSymbol.getTag()==Tag.CHAR){
                         int c = (int)tempSymbol.getCharValue().charAt(0);
@@ -343,12 +346,14 @@ public class Semantic {
                             c=(int)tempSymbol.getCharValue().charAt(1);
                         if (c<=0){
                             setError("数组大小必须大于0",root.getLineNum());
-                            return Integer.MIN_VALUE;
+                            size[0]=Integer.MIN_VALUE;
+                            break;
                         }
-                        size*=c;
+                        size[i]=c;
                     }else {
                         setError("数组下标类型不正确",root.getLineNum());
-                        return Integer.MIN_VALUE;
+                        size[0]=Integer.MIN_VALUE;
+                        break;
                     }
                 }
             }else if (tag == Tag.ADD || tag == Tag.SUB
@@ -360,19 +365,32 @@ public class Semantic {
                         int result = Integer.parseInt(part.getResult());
                         if (result < 1) {
                             setError("数组大小必须大于0", root.getLineNum());
-                            return Integer.MIN_VALUE;
+                            size[0]=Integer.MIN_VALUE;
+                            break;
                         } else {
-                            size*=result;
+                            size[i]=result;
                         }
                     } else {
                         setError("数组下标类型不正确", root.getLineNum());
-                        return Integer.MIN_VALUE;
+                        size[0]=Integer.MIN_VALUE;
+                        break;
                     }
-                } else
-                    return Integer.MIN_VALUE;
+                } else {
+                    size[0] = Integer.MIN_VALUE;
+                    break;
+                }
             }
         }
         return size;
+    }
+
+    //计算下标数组乘积
+    private int getArrIndexMul(int[] arr){
+        int sum=1;
+        for (int i = 0;i<arr.length;i++){
+            sum*=arr[i];
+        }
+        return sum;
     }
 
     /**
@@ -405,58 +423,11 @@ public class Semantic {
                 } else {
                     //声明数组
                     Symbol symbol = new Symbol(name, root.getTag(), child.getLineNum(), level);
-                    int arrayTag = child.getChildAt(0).getTag();
-                    String sizeValue = child.getChildAt(0).getContent();
-                    int size = getArraySize(child);
-                    if (size==Integer.MIN_VALUE)
+                    int[] indexArray = getArraySize(child);
+                    if (indexArray[0]==Integer.MIN_VALUE)
                         return;
-                    /**
-                    if (arrayTag == Tag.INTNUM) {
-                        int arraySize = Integer.parseInt(sizeValue);
-                        if (arraySize < 1) {
-                            setError("数组大小必须大于0", root.getLineNum());
-                            return;
-                        }
-                    } else if (arrayTag == Tag.ID) {
-                        if (checkID(root, level)) {
-                            Symbol tempSymbol = table.getAllLevel(child.getChildAt(0).getContent(), level);
-                            if (tempSymbol.getTag() == Tag.INT) {
-                                int arraySize = Integer.parseInt(tempSymbol.getIntValue());
-                                if (arraySize < 1) {
-                                    setError("数组大小必须大于0", root.getLineNum());
-                                    return;
-                                } else {
-                                    sizeValue = String.valueOf(arraySize);
-                                }
-                            } else {
-                                setError("类型不匹配，数组大小必须为整型", child.getLineNum());
-                                return;
-                            }
-                        } else {
-                            return;
-                        }
-                    } else if (arrayTag == Tag.ADD || arrayTag == Tag.SUB
-                            || arrayTag == Tag.MUL || arrayTag == Tag.DIVIDE
-                            || arrayTag==Tag.NEG || arrayTag==Tag.POS) {
-                        ExpressionPart part = expression_analyze(child.getChildAt(0));
-                        if (part != null) {
-                            if (part.isInt()) {
-                                int arraySize = Integer.parseInt(part.getResult());
-                                if (arraySize < 1) {
-                                    setError("数组大小必须大于0", root.getLineNum());
-                                    return;
-                                } else {
-                                    sizeValue = String.valueOf(arraySize);
-                                }
-                            } else {
-                                setError("类型不匹配，数组大小必须为整型", child.getLineNum());
-                                return;
-                            }
-                        } else
-                            return;
-                    }
-                     **/
-                    symbol.setArraySize(size);
+                    int size = getArrIndexMul(indexArray);
+                    symbol.setArraySize(indexArray);
                     table.addSymbol(symbol);
                     index++;
                     if (index < root.getChildCount() &&
@@ -996,7 +967,7 @@ public class Semantic {
         String content = leftNode.getContent();
         if (table.getAllLevel(content,level) != null){
             if (leftNode.getChildCount()!=0){
-                String array = array_analyze(leftNode.getChildAt(0),
+                String array = array_analyze(leftNode,
                         table.getAllLevel(content,level).getArraySize());
                 if (array!=null)
                     content+="@"+array;
@@ -1036,7 +1007,7 @@ public class Semantic {
         else if (tag == Tag.ID) {
             if (checkID(root, level)) {
                 if (root.getChildCount() > 0) {
-                    String array = array_analyze(root.getChildAt(0),
+                    String array = array_analyze(root,
                             table.getAllLevel(content, level).getArraySize());
                     if (array != null)
                         content += "@" + array;
@@ -1152,7 +1123,7 @@ public class Semantic {
             if (child.getTag()==Tag.ID){
                 if (checkID(child,level)){
                     if (root.getChildCount() != 0) {
-                        String str = array_analyze(root.getChildAt(0),
+                        String str = array_analyze(root,
                                 table.getAllLevel(content, level).getArraySize());
                         if (str != null)
                             content += "@" + str;
@@ -1214,7 +1185,7 @@ public class Semantic {
         } else if (tag == Tag.ID) {
             if (checkID(root, level)) {
                 if (root.getChildCount() != 0) {
-                    String str = array_analyze(root.getChildAt(0),
+                    String str = array_analyze(root,
                             table.getAllLevel(content, level).getArraySize());
                     if (str != null)
                         content += "@" + str;
@@ -1279,7 +1250,7 @@ public class Semantic {
                 } else if (childTag == Tag.ID) {
                     if (checkID(root.getChildAt(i), level)) {
                         if (root.getChildAt(i).getChildCount() != 0) {
-                            String arrStr = array_analyze(root.getChildAt(i).getChildAt(0),
+                            String arrStr = array_analyze(root.getChildAt(i),
                                     table.getAllLevel(childContent, level).getArraySize());
                             if (arrStr != null)
                                 childContent += "@" + arrStr;
@@ -1570,128 +1541,167 @@ public class Semantic {
      * @param arraySize 数组大小
      * @return 出错返回null
      */
-    private String array_analyze(TreeNode root, int arraySize) {
-        //TODO  怎么判断多维数组越界 现在得到的arraySize是相乘的大小
-        if (root.getTag() == Tag.INTNUM) {
-            int arrayIndex = Integer.parseInt(root.getContent());//数组下标
-            if (arrayIndex > -1 && arrayIndex < arraySize) {
-                return root.getContent();
-            } else if (arrayIndex < 0) {
-                setError("数组下标不能为负数", root.getLineNum());
-                return null;
-            } else {
-                setError("数组越界", root.getLineNum());
-                return null;
-            }
-        }else if (root.getTag()==Tag.TRUE){
-            if (1<arraySize){
-                return "1";
-            }else {
-                setError("数组越界", root.getLineNum());
-                return null;
-            }
-        }else if (root.getTag()==Tag.FALSE){
-            return "0";
-        }else if (root.getTag()==Tag.CHAR_S){
-            int arrayIndex = (int)root.getContent().charAt(0);
-            if (isEsc_char(root.getContent()))
-                arrayIndex = (int)root.getContent().charAt(1);
-            if (arrayIndex > -1 && arrayIndex < arraySize) {
-                return root.getContent();
-            } else if (arrayIndex < 0) {
-                setError("数组下标不能为负数", root.getLineNum());
-                return null;
-            } else {
-                setError("数组越界", root.getLineNum());
-                return null;
-            }
-        }
-        else if (root.getTag() == Tag.SCAN){
-            TreeNode parent = (TreeNode) root.getParent();
-            String input = scan_analyze(root,parent.getContent());
-            if (input!=null){
-                if (isInteger(input)){
-                    int arrayIndex = Integer.parseInt(input);
-                    if (arrayIndex > -1 && arrayIndex < arraySize) {
-                        return input;
+    private String array_analyze(TreeNode root, int[] arraySize) {
+        int count = root.getChildCount();
+        if (count<arraySize.length){
+            setError("数组维度小于声明维度", root.getLineNum());
+            return null;
+        }else if (count>arraySize.length){
+            setError("数组维度大于声明维度，越界", root.getLineNum());
+            return null;
+        }else {
+            int size = 1;
+            for (int i = 0;i<count;i++){
+                TreeNode child = root.getChildAt(i);
+                if (child.getTag() == Tag.INTNUM) {
+                    int arrayIndex = Integer.parseInt(child.getContent());//数组下标
+                    if (arrayIndex > -1 && arrayIndex < arraySize[i]) {
+                        size*=(arrayIndex+1);
                     } else if (arrayIndex < 0) {
-                        setError("数组下标不能为负数", root.getLineNum());
+                        setError("数组下标不能为负数", child.getLineNum());
                         return null;
                     } else {
-                        setError("数组越界", root.getLineNum());
+                        setError("数组越界", child.getLineNum());
                         return null;
                     }
-                }else if (input.equals("true")){
-                    if (1<arraySize){
-                        return "1";
+                }else if (child.getTag()==Tag.TRUE){
+                    if (1<arraySize[i]){
+                        size*=2;
                     }else {
-                        setError("数组越界", root.getLineNum());
+                        setError("数组越界", child.getLineNum());
                         return null;
                     }
-                }else if (input.equals("false")){
-                    return "0";
-                }else if (input.length()==1){
-                    int arrayIndex = (int)input.charAt(0);
-                    if (arrayIndex > -1 && arrayIndex < arraySize) {
-                        return root.getContent();
+                }else if (child.getTag()==Tag.FALSE){
+                    size*=1;
+                }else if (child.getTag()==Tag.CHAR_S){
+                    int arrayIndex = (int)child.getContent().charAt(0);
+                    if (isEsc_char(child.getContent()))
+                        arrayIndex = (int)child.getContent().charAt(1);
+                    if (arrayIndex > -1 && arrayIndex < arraySize[i]) {
+                        size*=(arrayIndex+1);
                     } else if (arrayIndex < 0) {
-                        setError("数组下标不能为负数", root.getLineNum());
+                        setError("数组下标不能为负数", child.getLineNum());
                         return null;
                     } else {
-                        setError("数组越界", root.getLineNum());
+                        setError("数组越界", child.getLineNum());
                         return null;
                     }
-                }else {
-                    setError("类型不匹配，数组下标必须为整数", root.getLineNum());
-                    return null;
+                }
+                else if (child.getTag() == Tag.SCAN){
+                    TreeNode parent = (TreeNode) child.getParent();
+                    String input = scan_analyze(child,parent.getContent());
+                    if (input!=null){
+                        if (isInteger(input)){
+                            int arrayIndex = Integer.parseInt(input);
+                            if (arrayIndex > -1 && arrayIndex < arraySize[i]) {
+                                size*=(Integer.parseInt(input)+1);
+                            } else if (arrayIndex < 0) {
+                                setError("数组下标不能为负数", child.getLineNum());
+                                return null;
+                            } else {
+                                setError("数组越界", child.getLineNum());
+                                return null;
+                            }
+                        }else if (input.equals("true")){
+                            if (1<arraySize[i]){
+                                size*=2;
+                            }else {
+                                setError("数组越界", child.getLineNum());
+                                return null;
+                            }
+                        }else if (input.equals("false")){
+                            size*=1;
+                        }else if (input.length()==1){
+                            int arrayIndex = (int)child.getContent().charAt(0);
+                            if (isEsc_char(child.getContent()))
+                                arrayIndex = (int)child.getContent().charAt(1);
+                            if (arrayIndex > -1 && arrayIndex < arraySize[i]) {
+                                size*=(arrayIndex+1);
+                            } else if (arrayIndex < 0) {
+                                setError("数组下标不能为负数", child.getLineNum());
+                                return null;
+                            } else {
+                                setError("数组越界", child.getLineNum());
+                                return null;
+                            }
+                        }else {
+                            setError("类型不匹配，数组下标必须为整数型", child.getLineNum());
+                            return null;
+                        }
+                    }
+                }
+                else if (child.getTag() == Tag.ID) {
+                    //下标为标识符
+                    if (checkID(child, level)) {
+                        Symbol temp = table.getAllLevel(child.getContent(), level);
+                        if (temp.getTag() == Tag.INT) {
+                            int arrayIndex = Integer.parseInt(temp.getIntValue());
+                            if (arrayIndex > -1 && arrayIndex < arraySize[i]) {
+                                size*=(Integer.parseInt(temp.getIntValue()));
+                            } else if (arrayIndex < 0) {
+                                setError("数组下标不能为负数", child.getLineNum());
+                                return null;
+                            } else {
+                                setError("数组越界", child.getLineNum());
+                                return null;
+                            }
+                        }else if (temp.getTag()==Tag.BOOL){
+                           if (temp.getBoolValue().equals("true")||temp.getBoolValue().equals("1")){
+                               if (1 < arraySize[i]) {
+                                   size*=2;
+                               }else {
+                                   setError("数组越界", child.getLineNum());
+                                   return null;
+                               }
+                           }else
+                               size*=1;
+                        }else if (temp.getTag()==Tag.CHAR){
+                            int arrayIndex = (int)temp.getCharValue().charAt(0);
+                            if (isEsc_char(temp.getCharValue()))
+                                arrayIndex = (int)temp.getCharValue().charAt(1);
+                            if (arrayIndex > -1 && arrayIndex < arraySize[i]) {
+                                size*=(arrayIndex+1);
+                            } else if (arrayIndex < 0) {
+                                setError("数组下标不能为负数", child.getLineNum());
+                                return null;
+                            } else {
+                                setError("数组越界", child.getLineNum());
+                                return null;
+                            }
+                        }
+                        else{
+                            setError("类型不匹配，数组下标必须为整型类型", child.getLineNum());
+                            return null;
+                        }
+                    } else {
+                        return null;
+                    }
+                } else if (child.getTag() == Tag.ADD || child.getTag() == Tag.SUB
+                        || child.getTag() == Tag.MUL || child.getTag() == Tag.DIVIDE) {
+                    ExpressionPart exp = expression_analyze(child);
+                    if (exp != null) {
+                        String arrayIndex = exp.getResult();
+                        if (isInteger(arrayIndex)) {
+                            int index = Integer.parseInt(arrayIndex);
+                            if (index > -1 && index < arraySize[i])
+                                size*=(Integer.parseInt(arrayIndex)+1);
+                            else if (index < 0) {
+                                setError("数组下标不能为负数", child.getLineNum());
+                                return null;
+                            } else {
+                                setError("数组越界", child.getLineNum());
+                                return null;
+                            }
+                        } else {
+                            setError("类型不匹配，数组下标必须为整数", child.getLineNum());
+                            return null;
+                        }
+                    } else
+                        return null;
                 }
             }
+            return String.valueOf(size-1);
         }
-        else if (root.getTag() == Tag.ID) {
-            //下标为标识符
-            if (checkID(root, level)) {
-                Symbol temp = table.getAllLevel(root.getContent(), level);
-                if (temp.getTag() == Tag.INT) {
-                    int arrayIndex = Integer.parseInt(temp.getIntValue());
-                    if (arrayIndex > -1 && arrayIndex < arraySize) {
-                        return temp.getIntValue();
-                    } else if (arrayIndex < 0) {
-                        setError("数组下标不能为负数", root.getLineNum());
-                        return null;
-                    } else {
-                        setError("数组越界", root.getLineNum());
-                        return null;
-                    }
-                } else {
-                    setError("类型不匹配，数组下标必须为整数", root.getLineNum());
-                    return null;
-                }
-            } else {
-                return null;
-            }
-        } else if (root.getTag() == Tag.ADD || root.getTag() == Tag.SUB
-                || root.getTag() == Tag.MUL || root.getTag() == Tag.DIVIDE) {
-            String arrayIndex = expression_analyze(root).getResult();
-            if (arrayIndex != null) {
-                if (isInteger(arrayIndex)) {
-                    int index = Integer.parseInt(arrayIndex);
-                    if (index > -1 && index < arraySize)
-                        return arrayIndex;
-                    else if (index < 0) {
-                        setError("数组下标不能为负数", root.getLineNum());
-                        return null;
-                    } else {
-                        setError("数组越界", root.getLineNum());
-                        return null;
-                    }
-                } else {
-                    setError("类型不匹配，数组下标必须为整数", root.getLineNum());
-                    return null;
-                }
-            } else
-                return null;
-        }
-        return null;
     }
 
     /**
@@ -1803,7 +1813,7 @@ public class Semantic {
             else if (tag == Tag.ID) {
                 if (checkID(temp, level)) {
                     if (temp.getChildCount() != 0) {
-                        String s = array_analyze(temp.getChildAt(0), table
+                        String s = array_analyze(temp, table
                                 .getAllLevel(tempContent, level)
                                 .getArraySize());
                         if (s != null)

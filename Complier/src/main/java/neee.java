@@ -49,7 +49,7 @@ public class neee {
         int aaa=(int)n;
         int i =1;
         double f =1.0;
-        int dd[]={2,3};
+        int dd[][]={{2,3},{2,3}};
         n=a.charAt(0);
         char c = (char)77;
         char d=(char)0;

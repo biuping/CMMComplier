@@ -61,14 +61,11 @@ public class T {
             if (parse.getErrorCount()==0){
                 Semantic semantic = new Semantic(root);
                 semantic.run();
-//                if (semantic.getErrorNum()!=0){
-//                    System.out.println("该程序中共有" + semantic.getErrorNum() + "个语义错误！");
-//                    for (int t=0;t<semantic.getErrors().size();t++){
-//                        System.out.println(semantic.getErrors().get(t).toString());
-//                    }
-//                }
             }else {
-                System.out.println("语法分析出错");
+                System.out.println("========语法分析出错========");
+                for (int z = 0;z< parse.getErrorCount();z++){
+                    System.out.println();
+                }
             }
 
 //            System.out.println(root);
