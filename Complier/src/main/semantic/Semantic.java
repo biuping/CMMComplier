@@ -15,7 +15,8 @@ public class Semantic {
     private TreeNode root;
     // 语义分析错误个数
     private int errorNum = 0;
-
+    //循环工具
+    private CycleUtil cycle = new CycleUtil();
     // 语义分析标识符作用域
     private int level = 0;
     //scan输入
@@ -101,6 +102,92 @@ public class Semantic {
                     assignTag==Tag.BOOL;
         }
         return false;
+    }
+
+    //得到数组下标数组
+    private int[] getArraySize(TreeNode root){
+        int count = root.getChildCount();  //数组维度
+        int[] size = new int[count];
+        for (int i=0;i<count;i++){
+            int tag = root.getChildAt(i).getTag();
+            if (tag==Tag.INTNUM){
+                int v = Integer.parseInt(root.getChildAt(i).getContent());
+                if (v<1){
+                    setError("数组大小必须大于0",root.getLineNum());
+                    size[0]=Integer.MIN_VALUE;
+                    break;
+                }else
+                    size[i]=v;
+            }
+            else if (tag==Tag.ID){
+                if (checkID(root,level)){
+                    Symbol tempSymbol = table.getAllLevel(root.getChildAt(i).getContent(), level);
+                    if (tempSymbol.getTag()==Tag.INT){
+                        int v = Integer.parseInt(tempSymbol.getIntValue());
+                        if (v<=0){
+                            setError("数组大小必须大于0",root.getLineNum());
+                            size[0]=Integer.MIN_VALUE;
+                            break;
+                        }else
+                            size[i]=v;
+                    }
+                    else if (tempSymbol.getTag()== Tag.BOOL){
+                        if (tempSymbol.getBoolValue().equals("false") || tempSymbol.getBoolValue().equals("0")){
+                            setError("数组大小必须大于0",root.getLineNum());
+                            size[0]=Integer.MIN_VALUE;
+                            break;
+                        }
+                    }else if (tempSymbol.getTag()==Tag.CHAR){
+                        int c = (int)tempSymbol.getCharValue().charAt(0);
+                        if (isEsc_char(tempSymbol.getCharValue()))
+                            c=(int)tempSymbol.getCharValue().charAt(1);
+                        if (c<=0){
+                            setError("数组大小必须大于0",root.getLineNum());
+                            size[0]=Integer.MIN_VALUE;
+                            break;
+                        }
+                        size[i]=c;
+                    }else {
+                        setError("数组下标类型不正确",root.getLineNum());
+                        size[0]=Integer.MIN_VALUE;
+                        break;
+                    }
+                }
+            }else if (tag == Tag.ADD || tag == Tag.SUB
+                    || tag == Tag.MUL || tag == Tag.DIVIDE
+                    || tag==Tag.NEG || tag==Tag.POS) {
+                ExpressionPart part = expression_analyze(root.getChildAt(i));
+                if (part != null) {
+                    if (part.isInt()) {
+                        int result = Integer.parseInt(part.getResult());
+                        if (result < 1) {
+                            setError("数组大小必须大于0", root.getLineNum());
+                            size[0]=Integer.MIN_VALUE;
+                            break;
+                        } else {
+                            size[i]=result;
+                        }
+                    } else {
+                        setError("数组下标类型不正确", root.getLineNum());
+                        size[0]=Integer.MIN_VALUE;
+                        break;
+                    }
+                } else {
+                    size[0] = Integer.MIN_VALUE;
+                    break;
+                }
+            }
+        }
+        return size;
+    }
+
+    //计算下标数组乘积
+    private int getArrIndexMul(int[] arr){
+        int sum=1;
+        for (int i = 0;i<arr.length;i++){
+            sum*=arr[i];
+        }
+        return sum;
     }
 
     //print打印转义的真正值
@@ -208,7 +295,7 @@ public class Semantic {
      * @param root 语法分析生成的语法树根节点
      */
     private void statement(TreeNode root) {
-        for (int i = 0; i < root.getChildCount(); i++) {
+        for (int i = 0; i < root.getChildCount() && cycle.getBreakCount()==0; i++) {
             TreeNode currentNode = root.getChildAt(i);
             int tag = currentNode.getTag();
             if (tag == Tag.INT || tag == Tag.REAL
@@ -222,35 +309,67 @@ public class Semantic {
                 //进入if，作用域改变
                 level++;
                 if_analyze(currentNode);
+                if (cycle.getBreakCount()!=0)
+                    return;
                 //出if，作用域改变
                 level--;
                 table.update(level);
             }else if (tag==Tag.FOR){
+                //进入循环
+                cycle.intoCycle(level);
                 //进入for，作用域改变
                 level++;
                 for_analyze(currentNode);
                 //出for，作用域改变
                 level--;
+                //结束循环
+                cycle.outCycle();
                 table.update(level);
             }else if (tag==Tag.WHILE){
+                //进入循环
+                cycle.intoCycle(level);
                 //进入while，作用域改变
                 level++;
                 while_analyze(currentNode);
                 //出while，作用域改变
                 level--;
+                //结束循环
+                cycle.outCycle();
                 table.update(level);
             }else if (tag==Tag.BLOCK){
                 //进入block，作用域改变
                 level++;
                 statement(currentNode);
+                if (cycle.getBreakCount()!=0)
+                    return;
                 //出block，作用域改变
                 level--;
                 table.update(level);
+            }else if(tag==Tag.BREAK){
+                if (cycle.isCycle()){
+                    break_analyze();
+                    return;
+                }else {
+                    setError("break只能应用于循环语句内",currentNode.getLineNum());
+                    return;
+                }
             }
             else if (tag == Tag.PRINT) {
                 print_analyze(currentNode.getChildAt(0));
             }
         }
+    }
+
+    /**
+     * break语义分析
+     *
+     * break只出现在循环内
+     */
+    private void break_analyze(){
+        int lastLevel = cycle.getLastLevel();
+        level=lastLevel+1;
+        table.update(lastLevel);
+        cycle.breakCountAdd();
     }
 
     /**
@@ -307,91 +426,7 @@ public class Semantic {
         }
     }
 
-    //得到数组下标数组
-    private int[] getArraySize(TreeNode root){
-        int count = root.getChildCount();  //数组维度
-        int[] size = new int[count];
-        for (int i=0;i<count;i++){
-            int tag = root.getChildAt(i).getTag();
-            if (tag==Tag.INTNUM){
-                int v = Integer.parseInt(root.getChildAt(i).getContent());
-                if (v<1){
-                    setError("数组大小必须大于0",root.getLineNum());
-                    size[0]=Integer.MIN_VALUE;
-                    break;
-                }else
-                    size[i]=v;
-            }
-            else if (tag==Tag.ID){
-                if (checkID(root,level)){
-                    Symbol tempSymbol = table.getAllLevel(root.getChildAt(i).getContent(), level);
-                    if (tempSymbol.getTag()==Tag.INT){
-                        int v = Integer.parseInt(tempSymbol.getIntValue());
-                        if (v<=0){
-                            setError("数组大小必须大于0",root.getLineNum());
-                            size[0]=Integer.MIN_VALUE;
-                            break;
-                        }else
-                            size[i]=v;
-                    }
-                    else if (tempSymbol.getTag()== Tag.BOOL){
-                        if (tempSymbol.getBoolValue().equals("false") || tempSymbol.getBoolValue().equals("0")){
-                            setError("数组大小必须大于0",root.getLineNum());
-                            size[0]=Integer.MIN_VALUE;
-                            break;
-                        }
-                    }else if (tempSymbol.getTag()==Tag.CHAR){
-                        int c = (int)tempSymbol.getCharValue().charAt(0);
-                        if (isEsc_char(tempSymbol.getCharValue()))
-                            c=(int)tempSymbol.getCharValue().charAt(1);
-                        if (c<=0){
-                            setError("数组大小必须大于0",root.getLineNum());
-                            size[0]=Integer.MIN_VALUE;
-                            break;
-                        }
-                        size[i]=c;
-                    }else {
-                        setError("数组下标类型不正确",root.getLineNum());
-                        size[0]=Integer.MIN_VALUE;
-                        break;
-                    }
-                }
-            }else if (tag == Tag.ADD || tag == Tag.SUB
-                    || tag == Tag.MUL || tag == Tag.DIVIDE
-                    || tag==Tag.NEG || tag==Tag.POS) {
-                ExpressionPart part = expression_analyze(root.getChildAt(i));
-                if (part != null) {
-                    if (part.isInt()) {
-                        int result = Integer.parseInt(part.getResult());
-                        if (result < 1) {
-                            setError("数组大小必须大于0", root.getLineNum());
-                            size[0]=Integer.MIN_VALUE;
-                            break;
-                        } else {
-                            size[i]=result;
-                        }
-                    } else {
-                        setError("数组下标类型不正确", root.getLineNum());
-                        size[0]=Integer.MIN_VALUE;
-                        break;
-                    }
-                } else {
-                    size[0] = Integer.MIN_VALUE;
-                    break;
-                }
-            }
-        }
-        return size;
-    }
 
-    //计算下标数组乘积
-    private int getArrIndexMul(int[] arr){
-        int sum=1;
-        for (int i = 0;i<arr.length;i++){
-            sum*=arr[i];
-        }
-        return sum;
-    }
 
     /**
      * 声明代码段语义分析
@@ -1054,6 +1089,8 @@ public class Semantic {
                 System.out.println("true");
             else
                 System.out.println("false");
+        }else {
+            setError("print对象为无法输出对象，请更正",root.getLineNum());
         }
     }
 
@@ -1079,9 +1116,12 @@ public class Semantic {
         while (condition_analyze(conditionNode.getChildAt(0))){
             level++;
             statement(statementNode);
+            if (cycle.getBreakCount()!=0)
+                break;
             level--;
             table.update(level);
             assign_analyze(changeNode.getChildAt(0));
+
         }
     }
 
@@ -1097,6 +1137,8 @@ public class Semantic {
         while (condition_analyze(conditionNode.getChildAt(0))){
             level++;
             statement(statementNode);
+            if (!cycle.isCycle())
+                break;
             level--;
             table.update(level);
         }
