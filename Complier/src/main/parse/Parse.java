@@ -634,7 +634,7 @@ public class Parse {
      * 格式：scan(ID);
      * */
     private TreeNode scan_sta(boolean isDeclare){
-        TreeNode temp =new TreeNode("scan","Scan",currentToken.getTag(),currentToken.getLineNum());
+        TreeNode temp =null;
         nextToken();
         //匹配scan后的左括号
         if (currentToken!=null&&currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("(")){
@@ -642,13 +642,13 @@ public class Parse {
         }else {
             //错误
             PError error = setError("scan之后缺少左括号\"(\"");
-            temp .add(new TreeNode("Error"+errorCount,error.toString()));
+            temp =new TreeNode("Error"+errorCount,error.toString());
+            return temp;
         }
         Token tempToken = tokens.get(index+1);
         if (tempToken!=null && !(currentToken.getTag()==Tag.SEPARATOR &&
                 currentToken.getContent().equals(")"))){
-            TreeNode eNode = condition();
-            temp.add(eNode);
+            temp = condition();
         }
         //匹配右括号
         if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR &&
@@ -656,7 +656,8 @@ public class Parse {
             nextToken();
         }else {
             PError error = setError("scan之后缺少右括号\")\"");
-            temp.add(new TreeNode("Error"+errorCount,error.toString()));
+            temp=new TreeNode("Error"+errorCount,error.toString());
+            return temp;
         }
         if (!isDeclare){
             //结尾分号
@@ -665,7 +666,7 @@ public class Parse {
                 nextToken();
             }else {
                 PError error = setError("scan之后缺少分号\";\"");
-                temp.add(new TreeNode("Error"+errorCount,error.toString()));
+                temp=new TreeNode("Error"+errorCount,error.toString());
                 return temp;
             }
         }
