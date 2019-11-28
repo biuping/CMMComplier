@@ -139,9 +139,7 @@ public class Parse {
         }
         //scan语句
         else if (currentToken!=null && currentToken.getTag()==Tag.SCAN){
-            TreeNode scanNode = new TreeNode("关键字","scan",currentToken.getTag(),currentToken.getLineNum());
-            scanNode.add(scan_sta(false));
-            temp=scanNode;
+            temp=scan_sta(false);
         }
         //赋值语句
         else if (currentToken!=null && currentToken.getTag()==Tag.ID){
@@ -634,7 +632,7 @@ public class Parse {
      * 格式：scan(ID);
      * */
     private TreeNode scan_sta(boolean isDeclare){
-        TreeNode temp =null;
+        TreeNode temp =new TreeNode("关键字","scan",currentToken.getTag(),currentToken.getLineNum());;
         nextToken();
         //匹配scan后的左括号
         if (currentToken!=null&&currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("(")){
@@ -642,13 +640,13 @@ public class Parse {
         }else {
             //错误
             PError error = setError("scan之后缺少左括号\"(\"");
-            temp =new TreeNode("Error"+errorCount,error.toString());
+            temp.add(new TreeNode("Error"+errorCount,error.toString()));
             return temp;
         }
         Token tempToken = tokens.get(index+1);
         if (tempToken!=null && !(currentToken.getTag()==Tag.SEPARATOR &&
                 currentToken.getContent().equals(")"))){
-            temp = condition();
+            temp.add(condition());
         }
         //匹配右括号
         if (currentToken != null && currentToken.getTag()==Tag.SEPARATOR &&
@@ -656,7 +654,7 @@ public class Parse {
             nextToken();
         }else {
             PError error = setError("scan之后缺少右括号\")\"");
-            temp=new TreeNode("Error"+errorCount,error.toString());
+            temp.add(new TreeNode("Error"+errorCount,error.toString()));
             return temp;
         }
         if (!isDeclare){
@@ -666,7 +664,7 @@ public class Parse {
                 nextToken();
             }else {
                 PError error = setError("scan之后缺少分号\";\"");
-                temp=new TreeNode("Error"+errorCount,error.toString());
+                temp.add(new TreeNode("Error"+errorCount,error.toString()));
                 return temp;
             }
         }

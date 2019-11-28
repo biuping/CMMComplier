@@ -626,7 +626,7 @@ public class Semantic {
                     } else if (input.equals("false")) {
                         symbol.setIntValue(String.valueOf(0));
                         symbol.setRealValue(String.valueOf((double) 0));
-                    } else {
+                    }else {
                         setError("类型不匹配，不能赋值给int类型的变量", valueNode.getLineNum());
                     }
                 }
@@ -1174,12 +1174,12 @@ public class Semantic {
      * @param root while节点
      */
     private String scan_analyze(TreeNode root, String name) {
-        String input = "";
+        StringBuilder input = new StringBuilder();
         Scanner scanner = new Scanner(System.in);
         if (root.getChildCount() == 0) {
             System.out.print("输入" + name + ":");
-            input = scanner.nextLine();
-            return input;
+            input = new StringBuilder(scanner.nextLine());
+            return input.toString();
         }else if (root.getChildAt(0).getTag()==Tag.ID){
             isScanAssgin=true;
             TreeNode id = root.getChildAt(0);
@@ -1187,15 +1187,15 @@ public class Semantic {
                 Symbol temp = table.getAllLevel(id.getContent(), level);
                 isScanAssgin=false;
                 System.out.print("输入" + id.getContent() + ":");
-                input = scanner.nextLine();
+                input = new StringBuilder(scanner.nextLine());
                 if (temp.getTag()==Tag.INT){
-                    if (isInteger(input)){
-                        temp.setIntValue(input);
-                        temp.setRealValue(String.valueOf(Double.parseDouble(input)));
-                    }else if (input.equals("true")){
+                    if (isInteger(input.toString())){
+                        temp.setIntValue(input.toString());
+                        temp.setRealValue(String.valueOf(Double.parseDouble(input.toString())));
+                    }else if (input.toString().equals("true")){
                         temp.setIntValue("1");
                         temp.setRealValue("1.0");
-                    }else if (input.equals("false")){
+                    }else if (input.toString().equals("false")){
                         temp.setIntValue("0");
                         temp.setRealValue("0.0");
                     }else{
@@ -1203,27 +1203,27 @@ public class Semantic {
                         return "";
                     }
                 }else if (temp.getTag()==Tag.REAL){
-                    if (isInteger(input)){
-                        temp.setRealValue(String.valueOf(Double.parseDouble(input)));
-                    }else if (input.equals("true")){
+                    if (isInteger(input.toString())){
+                        temp.setRealValue(String.valueOf(Double.parseDouble(input.toString())));
+                    }else if (input.toString().equals("true")){
                         temp.setRealValue("1.0");
-                    }else if (input.equals("false")){
+                    }else if (input.toString().equals("false")){
                         temp.setRealValue("0.0");
-                    }else if (isReal(input))
-                        temp.setRealValue(input);
+                    }else if (isReal(input.toString()))
+                        temp.setRealValue(input.toString());
                     else{
                         setError("输入内容不能赋值给real类型变量",id.getLineNum());
                         return "";
                     }
                 }else if (temp.getTag()==Tag.BOOL){
-                    if (isInteger(input)||isReal(input)){
-                        if (Double.parseDouble(input)==0)
+                    if (isInteger(input.toString())||isReal(input.toString())){
+                        if (Double.parseDouble(input.toString())==0)
                             temp.setBoolValue("0");
                         else
                             temp.setBoolValue("1");
-                    }else if (input.equals("true")){
+                    }else if (input.toString().equals("true")){
                         temp.setBoolValue("1");
-                    }else if (input.equals("false")){
+                    }else if (input.toString().equals("false")){
                         temp.setBoolValue("0");
                     }
                     else{
@@ -1231,26 +1231,26 @@ public class Semantic {
                         return "";
                     }
                 }else if (temp.getTag()==Tag.CHAR){
-                    if (isInteger(input)){
-                        temp.setCharValue(String.valueOf((char)Integer.parseInt(input)));
-                    }else if (input.equals("true")){
+                    if (isInteger(input.toString())){
+                        temp.setCharValue(String.valueOf((char)Integer.parseInt(input.toString())));
+                    }else if (input.toString().equals("true")){
                         temp.setCharValue(String.valueOf((char)1));
-                    }else if (input.equals("false")){
+                    }else if (input.toString().equals("false")){
                         temp.setCharValue(String.valueOf((char)2));
                     }else{
-                        if (isEsc_char(input))
+                        if (isEsc_char(input.toString()))
                             temp.setCharValue(String.valueOf(input.charAt(1)));
                         else if(input.length()==1)
-                            temp.setCharValue(input);
+                            temp.setCharValue(input.toString());
                         else {
                             setError("输入内容不能赋值给int类型变量",id.getLineNum());
                             return "";
                         }
                     }
                 }else if (temp.getTag()==Tag.STRING){
-                    temp.setStringValue(input);
+                    temp.setStringValue(input.toString());
                 }
-                return input;
+                return input.toString();
             }else {
                 setError(id.getContent()+"未声明",id.getLineNum());
                 return "";
@@ -1260,27 +1260,12 @@ public class Semantic {
             //打开文件
             TreeNode child = root.getChildAt(0);
             String content = child.getContent();
-            String filePath = "D:\\test.txt";
-            if (child.getTag() == Tag.ID) {
-                if (checkID(child, level)) {
-                    if (root.getChildCount() != 0) {
-                        String str = array_analyze(root,
-                                table.getAllLevel(content, level).getArraySize());
-                        if (str != null)
-                            content += "@" + str;
-                        else
-                            return null;
-                    }
-                    Symbol symbol = table.getAllLevel(content, level);
-                    if (symbol.getTag() == Tag.STRING) {
-                        filePath = symbol.getStringValue();
-                    } else {
-                        setError("scan无法读取此类型", child.getLineNum());
-                        return null;
-                    }
-                }
-            } else if (child.getTag() == Tag.STR) {
-                filePath = child.getContent();
+            String filePath;
+            if (child.getTag()==Tag.STR)
+                filePath = content;
+            else{
+                setError("文件路径错误",child.getLineNum());
+                return null;
             }
             File file = new File(filePath);
             InputStreamReader reader = null;
@@ -1289,12 +1274,12 @@ public class Semantic {
                 BufferedReader br = new BufferedReader(reader);
                 String line = "";
                 while ((line = br.readLine()) != null) {
-                    input += line;
+                    input.append(line);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            return input;
+            return input.toString();
         }
     }
 

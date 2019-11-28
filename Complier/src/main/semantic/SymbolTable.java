@@ -68,6 +68,7 @@ public class SymbolTable {
         for (int i = 0; i < size(); i++) {
             if (get(i).getLevel() > level) {
                 remove(i);
+                i--;
             }
         }
     }
