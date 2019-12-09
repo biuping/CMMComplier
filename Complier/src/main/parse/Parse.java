@@ -781,8 +781,9 @@ public class Parse {
      */
     private TreeNode declare_sub(TreeNode rootNode,boolean isChar){
         boolean isArray=false;
+        TreeNode idNode=null;
         if (currentToken!=null && currentToken.getTag()==Tag.ID){
-            TreeNode idNode = new TreeNode("标识符",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
+            idNode = new TreeNode("标识符",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum());
             rootNode.add(idNode);
             nextToken();
 
@@ -819,6 +820,7 @@ public class Parse {
                         && currentToken.getContent().equals("\"") && isChar){
                     //char数组 字符串声明方式
                     nextToken();
+                    idNode.add(new TreeNode("整数",String.valueOf(currentToken.getContent().length()),Tag.INTNUM,currentToken.getLineNum()));
                     assignNode.add(new TreeNode("字符串",currentToken.getContent(),currentToken.getTag(),currentToken.getLineNum()));
                     nextToken();
                 }
@@ -1122,7 +1124,7 @@ public class Parse {
             while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("[")){
                 nextToken();
                 if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals("]")){
-                    root.add(new TreeNode("undefined","Undefined",4,currentToken.getLineNum()));
+//                    root.add(new TreeNode("undefined","Undefined",4,currentToken.getLineNum()));
                     nextToken();
                 } else {
                     //分析中括号中的表达式

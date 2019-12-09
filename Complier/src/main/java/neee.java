@@ -39,30 +39,19 @@ public class neee {
             return false;
     }
 
+    private static boolean isReal(String s) {
+        if (s.matches("^((\\-|\\+)?[\\s]*\\d+)(\\.\\d+)+$"))
+            return true;
+        else
+            return false;
+    }
+
     public static void main(String args[]){
+        int m,n;
+        n=6;m=00000;
+        double d = 000.000;
+        String s = "ffww";
+        System.out.println(s.length());
 
-        String s="";
-        String  a ="\t";
-//        Scanner scanner = new Scanner(System.in);
-//        s=scanner.nextLine();
-        char n = '\t';
-        int aaa=(int)n;
-        int i =1;
-        double f =1.0;
-        int dd[][]={{2,3},{2,3}};
-        n=a.charAt(0);
-        char c = (char)77;
-        char d=(char)0;
-        double e = f*n;
-        boolean b =isInteger(s);
-//        if (isESC(s)){
-//            d=s.charAt(1);
-//        }else
-//            d=s.charAt(0);
-
-        for (int z=0;z<3;z++){
-            i++;
-        }
-        System.out.println(c);
     }
 }

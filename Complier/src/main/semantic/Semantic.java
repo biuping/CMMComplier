@@ -46,8 +46,7 @@ public class Semantic {
 
     //识别整数
     private static boolean isInteger(String s) {
-        if (s.matches("^(\\-|\\+)?[\\s]*[0-9]\\d*$") || s.matches("^(\\-|\\+?)0$")
-                && !s.matches("^-?0{1,}\\d+$"))
+        if (s.matches("^(\\-|\\+)?[\\s]*[0-9]\\d*$") || s.matches("^(\\-|\\+?)0$"))
             return true;
         else
             return false;
@@ -55,8 +54,7 @@ public class Semantic {
 
     //识别浮点数
     private static boolean isReal(String s) {
-        if (s.matches("^((\\-|\\+)?[\\s]*\\d+)(\\.\\d+)+$")
-                && !s.matches("^(-?0{2,}+)(\\.\\d+)+$"))
+        if (s.matches("^((\\-|\\+)?[\\s]*\\d+)(\\.\\d+)+$"))
             return true;
         else
             return false;
@@ -76,35 +74,6 @@ public class Semantic {
                 || s.equals("\\r") || s.equals("\\\\");
     }
 
-    //判断数组赋值类型是否匹配
-    private boolean judgeTypeEqual(int declareTag, int assignTag) {
-        if (declareTag == Tag.INT) {
-            return assignTag == Tag.BOOL || assignTag == Tag.CHAR_S ||
-                    assignTag == Tag.INT || assignTag == Tag.CHAR ||
-                    assignTag == Tag.TRUE || assignTag == Tag.FALSE ||
-                    assignTag == Tag.INTNUM;
-        } else if (declareTag == Tag.REAL) {
-            return assignTag == Tag.INT || assignTag == Tag.CHAR_S ||
-                    assignTag == Tag.INTNUM || assignTag == Tag.CHAR ||
-                    assignTag == Tag.TRUE || assignTag == Tag.FALSE ||
-                    assignTag == Tag.REALNUM || assignTag == Tag.REAL ||
-                    assignTag == Tag.BOOL;
-        } else if (declareTag == Tag.BOOL) {
-            return assignTag == Tag.INT || assignTag == Tag.CHAR_S ||
-                    assignTag == Tag.INTNUM || assignTag == Tag.CHAR ||
-                    assignTag == Tag.TRUE || assignTag == Tag.FALSE ||
-                    assignTag == Tag.REALNUM || assignTag == Tag.REAL ||
-                    assignTag == Tag.BOOL;
-        } else if (declareTag == Tag.STRING) {
-            return assignTag == Tag.STRING || assignTag == Tag.STR;
-        } else if (declareTag == Tag.CHAR) {
-            return assignTag == Tag.INTNUM || assignTag == Tag.CHAR_S ||
-                    assignTag == Tag.INT || assignTag == Tag.CHAR ||
-                    assignTag == Tag.TRUE || assignTag == Tag.FALSE ||
-                    assignTag == Tag.BOOL;
-        }
-        return false;
-    }
 
     //得到数组下标数组
     private int[] getArraySize(TreeNode root) {
@@ -494,49 +463,25 @@ public class Semantic {
                     if (index < root.getChildCount() &&
                             root.getChildAt(index).getTag() == Tag.ASSIGN) {
                         TreeNode items = root.getChildAt(index).getChildAt(0);
-                        int count = items.getChildCount();
-                        if (count <= size) {
-                            for (int j = 0; j < count; j++) {
-                                //大括号声明的数组元素
-                                TreeNode item = items.getChildAt(j);  //赋值的值结点
-                                String itemName = child.getContent() + "@" + j;
-                                Symbol itemSymbol = new Symbol(itemName, root.getTag(),
-                                        items.getLineNum(), level);
-                                String value = item.getContent();
-                                String judge = declare_sub(tag, item, itemSymbol, value);
-                                if (judge == null)
-                                    return;
-                                else
-                                    table.addSymbol(itemSymbol);
+                        if (tag==Tag.CHAR && items.getTag()==Tag.STR){
+                            //处理char c[]="ss";
+                            String value = items.getContent();
+                            for(int j=0;j<size;j++){
+                                String itemName = child.getContent()+"@"+j;
+                                Symbol itemSymbol = new Symbol(itemName,tag,items.getLineNum(),level);
+                                String itemValue = String.valueOf(value.charAt(j));
+                                itemSymbol.setCharValue(itemValue);
+                                table.addSymbol(itemSymbol);
                             }
-                            if (count < size) {
-                                for (int j = count; j < size; j++) {
-                                    TreeNode item = new TreeNode();
-                                    switch (tag) {
-                                        case Tag.INT:
-                                            item.setTag(Tag.INTNUM);
-                                            item.setContent(String.valueOf(Integer.MIN_VALUE));
-                                            break;
-                                        case Tag.REAL:
-                                            item.setTag(Tag.REALNUM);
-                                            item.setContent(String.valueOf(Double.MIN_VALUE));
-                                            break;
-                                        case Tag.CHAR:
-                                            item.setTag(Tag.CHAR_S);
-                                            item.setContent(String.valueOf(Character.MIN_VALUE));
-                                            break;
-                                        case Tag.BOOL:
-                                            item.setTag(Tag.FALSE);
-                                            item.setContent("0");
-                                            break;
-                                        case Tag.STRING:
-                                            item.setTag(Tag.STR);
-                                            item.setContent("");
-                                            break;
-                                    }
-                                    item.setLineNum(root.getLineNum());
+                        }else {
+                            int count = items.getChildCount();
+                            if (count <= size) {
+                                for (int j = 0; j < count; j++) {
+                                    //大括号声明的数组元素
+                                    TreeNode item = items.getChildAt(j);  //赋值的值结点
                                     String itemName = child.getContent() + "@" + j;
-                                    Symbol itemSymbol = new Symbol(itemName, root.getTag(), items.getLineNum(), level);
+                                    Symbol itemSymbol = new Symbol(itemName, root.getTag(),
+                                            items.getLineNum(), level);
                                     String value = item.getContent();
                                     String judge = declare_sub(tag, item, itemSymbol, value);
                                     if (judge == null)
@@ -544,14 +489,51 @@ public class Semantic {
                                     else
                                         table.addSymbol(itemSymbol);
                                 }
+                                if (count < size) {
+                                    for (int j = count; j < size; j++) {
+                                        TreeNode item = new TreeNode();
+                                        switch (tag) {
+                                            case Tag.INT:
+                                                item.setTag(Tag.INTNUM);
+                                                item.setContent(String.valueOf(Integer.MIN_VALUE));
+                                                break;
+                                            case Tag.REAL:
+                                                item.setTag(Tag.REALNUM);
+                                                item.setContent(String.valueOf(Double.MIN_VALUE));
+                                                break;
+                                            case Tag.CHAR:
+                                                item.setTag(Tag.CHAR_S);
+                                                item.setContent(String.valueOf(Character.MIN_VALUE));
+                                                break;
+                                            case Tag.BOOL:
+                                                item.setTag(Tag.FALSE);
+                                                item.setContent("0");
+                                                break;
+                                            case Tag.STRING:
+                                                item.setTag(Tag.STR);
+                                                item.setContent("");
+                                                break;
+                                        }
+                                        item.setLineNum(root.getLineNum());
+                                        String itemName = child.getContent() + "@" + j;
+                                        Symbol itemSymbol = new Symbol(itemName, root.getTag(), items.getLineNum(), level);
+                                        String value = item.getContent();
+                                        String judge = declare_sub(tag, item, itemSymbol, value);
+                                        if (judge == null)
+                                            return;
+                                        else
+                                            table.addSymbol(itemSymbol);
+                                    }
+                                }
+                            } else {
+                                ++index;
+                                setError("数组大小超过声明大小", root.getLineNum());
+                                return;
                             }
-                        } else {
-                            ++index;
-                            setError("数组大小超过声明大小", root.getLineNum());
-                            return;
                         }
                     } else {
                         //默认值
+                        index--;
                         for (int i = 0; i < size; i++) {
                             String itemName = child.getContent() + "@" + i;
                             Symbol itemSymbol = new Symbol(itemName, root.getTag(),
@@ -593,7 +575,9 @@ public class Semantic {
                 symbol.setIntValue(value);
                 symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
             } else if (valueNode.getTag() == Tag.REALNUM) {
-                setError("不能将real数值赋值给int型变量", valueNode.getLineNum());
+                int v = (int)Double.parseDouble(value);
+                symbol.setIntValue(String.valueOf(v));
+                symbol.setRealValue(String.valueOf(v));
             } else if (valueNode.getTag() == Tag.CHAR_S) {
                 char c;
                 if (isEsc_char(valueNode.getContent()))
@@ -626,19 +610,36 @@ public class Semantic {
                     } else if (input.equals("false")) {
                         symbol.setIntValue(String.valueOf(0));
                         symbol.setRealValue(String.valueOf((double) 0));
-                    }else {
+                    } else if (isReal(input)){
+                        int v = (int)Double.parseDouble(input);
+                        symbol.setIntValue(String.valueOf(v));
+                        symbol.setRealValue(String.valueOf(v));
+                    }
+                    else {
                         setError("类型不匹配，不能赋值给int类型的变量", valueNode.getLineNum());
                     }
                 }
             } else if (valueNode.getTag() == Tag.ID) {
                 if (checkID(valueNode, level)) {
-                    Symbol idSymbol = table.getAllLevel(valueNode.getContent(), level);
+                    String content = valueNode.getContent();
+                    if (valueNode.getChildCount() > 0) {
+                        String array = array_analyze(valueNode,
+                                table.getAllLevel(content, level).getArraySize());
+                        if (array != null)
+                            content += "@" + array;
+                        else
+                            return"";
+                    }
+                    Symbol idSymbol = table.getAllLevel(content, level);
                     if (idSymbol.getTag() == Tag.INT) {
                         symbol.setIntValue(idSymbol.getIntValue());
                         symbol.setRealValue(String.
                                 valueOf(Double.parseDouble(idSymbol.getIntValue())));
-                    } else if (idSymbol.getTag() == Tag.REAL)
-                        setError("不能将real数值赋值给int型变量", valueNode.getLineNum());
+                    } else if (idSymbol.getTag() == Tag.REAL){
+                        int v = (int)Double.parseDouble(idSymbol.getRealValue());
+                        symbol.setIntValue(String.valueOf(v));
+                        symbol.setRealValue(String.valueOf(v));
+                    }
                     else if (idSymbol.getTag() == Tag.CHAR) {
                         char c;
                         if (isEsc_char(idSymbol.getCharValue()))
@@ -674,10 +675,11 @@ public class Semantic {
                 if (result != null) {
                     if (isInteger(result) && part.isInt()) {
                         symbol.setIntValue(result);
-                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
+                        symbol.setRealValue(String.valueOf(Integer.parseInt(result)));
                     } else if (isReal(result) && !part.isString()) {
-                        setError("不能将real数值赋值给int型变量", valueNode.getLineNum());
-                        return null;
+                        int v = (int)Double.parseDouble(result);
+                        symbol.setIntValue(String.valueOf(v));
+                        symbol.setRealValue(String.valueOf(v));
                     } else if (part.isString()) {
                         setError("不能将字符串赋值给int型变量", valueNode.getLineNum());
                         return null;
@@ -699,7 +701,7 @@ public class Semantic {
             if (valueNode.getTag() == Tag.INTNUM) {
                 symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
             } else if (valueNode.getTag() == Tag.REALNUM) {
-                symbol.setRealValue(String.valueOf(Double.parseDouble(value)));
+                symbol.setRealValue(value);
             } else if (valueNode.getTag() == Tag.CHAR_S) {
                 char c;
                 if (isEsc_char(valueNode.getContent()))
@@ -735,8 +737,7 @@ public class Semantic {
                 if (checkID(valueNode, level)) {
                     Symbol idSymbol = table.getAllLevel(valueNode.getContent(), level);
                     if (idSymbol.getTag() == Tag.INT || idSymbol.getTag() == Tag.REAL) {
-                        symbol.setRealValue(String.
-                                valueOf(Double.parseDouble(idSymbol.getRealValue())));
+                        symbol.setRealValue(idSymbol.getRealValue());
                     } else if (idSymbol.getTag() == Tag.CHAR) {
                         char c;
                         if (isEsc_char(idSymbol.getCharValue()))
@@ -763,15 +764,21 @@ public class Semantic {
                     result = part.getResult();
                 }
                 if (result != null) {
-                    if (isInteger(result) && part.isInt()) {
-                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
-                    } else if (isReal(result) && !part.isString()) {
-                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
-                    } else if (part.isString()) {
+                    if (part.getTag()==Tag.STRING){
                         setError("不能将字符串赋值给real型变量", valueNode.getLineNum());
                         return null;
-                    } else
-                        return null;
+                    } else{
+                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
+                    }
+//                    if (isInteger(result) && part.isInt()) {
+//                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
+//                    } else if (isReal(result) && !part.isString()) {
+//                        symbol.setRealValue(String.valueOf(Double.parseDouble(result)));
+//                    } else if (part.isString()) {
+//                        setError("不能将字符串赋值给real型变量", valueNode.getLineNum());
+//                        return null;
+//                    } else
+//                        return null;
                 }
             } else if (valueNode.getTag() == Tag.EQ || valueNode.getTag() == Tag.LE || valueNode.getTag() == Tag.GE || valueNode.getTag() == Tag.UE
                     || valueNode.getTag() == Tag.LESS || valueNode.getTag() == Tag.GREATER ||
@@ -787,7 +794,8 @@ public class Semantic {
                 char c = (char) Integer.parseInt(valueNode.getContent());
                 symbol.setCharValue(String.valueOf(c));
             } else if (valueNode.getTag() == Tag.REAL) {
-                setError("不能将real数值赋值给char型变量", valueNode.getLineNum());
+                char c = (char) (int)Double.parseDouble(valueNode.getContent());
+                symbol.setCharValue(String.valueOf(c));
             } else if (valueNode.getTag() == Tag.CHAR_S)
                 symbol.setCharValue(value);
             else if (valueNode.getTag() == Tag.STR)
@@ -804,7 +812,11 @@ public class Semantic {
                         symbol.setCharValue(String.valueOf((char) 1));
                     } else if (input.equals("false")) {
                         symbol.setCharValue(String.valueOf((char) 0));
-                    } else {
+                    } else if (isReal(input)){
+                        char c = (char) (int)Double.parseDouble(input);
+                        symbol.setCharValue(String.valueOf(c));
+                    }
+                    else {
                         setError("类型不匹配，不能赋值给char类型的变量", valueNode.getLineNum());
                     }
                 }
@@ -820,7 +832,8 @@ public class Semantic {
                         char c = (char) Integer.parseInt(idSymbol.getIntValue());
                         symbol.setCharValue(String.valueOf(c));
                     } else if (idSymbol.getTag() == Tag.REAL) {
-                        setError("不能将real型变量字符赋值给char型变量", valueNode.getLineNum());
+                        char c = (char) (int)Double.parseDouble(idSymbol.getRealValue());
+                        symbol.setCharValue(String.valueOf(c));
                     } else if (idSymbol.getTag() == Tag.CHAR)
                         symbol.setCharValue(idSymbol.getCharValue());
                     else if (idSymbol.getTag() == Tag.STRING)
@@ -837,21 +850,30 @@ public class Semantic {
                     || valueNode.getTag() == Tag.LESS || valueNode.getTag() == Tag.GREATER ||
                     valueNode.getTag() == Tag.AND || valueNode.getTag() == Tag.OR) {
                 if (condition_analyze(valueNode)) {
-                    symbol.setCharValue(String.valueOf(1));
+                    symbol.setCharValue(String.valueOf((char)1));
                 } else {
-                    symbol.setCharValue(String.valueOf(0));
+                    symbol.setCharValue(String.valueOf((char)0));
                 }
             } else if (valueNode.getTag() == Tag.ADD || valueNode.getTag() == Tag.SUB
                     || valueNode.getTag() == Tag.MUL || valueNode.getTag() == Tag.DIVIDE
                     || valueNode.getTag() == Tag.NEG || valueNode.getTag() == Tag.POS
                     || valueNode.getTag()==Tag.BAND || valueNode.getTag()==Tag.BOR) {
                 ExpressionPart exp = expression_analyze(valueNode);
-                assert exp != null;
-                if (exp.getTag() == Tag.INT) {
-                    symbol.setCharValue(String.valueOf((char) Integer.parseInt(exp.getResult())));
-                } else {
-                    setError("类型不匹配，不能赋值给char型变量", valueNode.getLineNum());
+                String result;
+                if (exp==null)
+                    return null;
+                else {
+                    result = exp.getResult();
+                    if (exp.getTag() == Tag.INT) {
+                        symbol.setCharValue(String.valueOf((char) Integer.parseInt(result)));
+                    }else if (exp.getTag()==Tag.REAL){
+                        int v = (int)Double.parseDouble(result);
+                        symbol.setCharValue(String.valueOf((char)v));
+                    } else{
+                        setError("类型不匹配，不能将字符串赋值给char型变量", valueNode.getLineNum());
+                    }
                 }
+
             }
         } else if (tag == Tag.STRING) {  //real 声明
             if (valueNode.getTag() == Tag.INTNUM) {
@@ -1039,7 +1061,7 @@ public class Semantic {
         //赋予的值
         TreeNode valueNode = root.getChildAt(1);
         String valueContent = valueNode.getContent();
-        String s = declare_sub(leftTag, valueNode, symbol, valueContent);
+        declare_sub(leftTag, valueNode, symbol, valueContent);
     }
 
     /**
@@ -1183,8 +1205,17 @@ public class Semantic {
         }else if (root.getChildAt(0).getTag()==Tag.ID){
             isScanAssgin=true;
             TreeNode id = root.getChildAt(0);
+            String content=id.getContent();
             if (checkID(id,level)){
-                Symbol temp = table.getAllLevel(id.getContent(), level);
+                if (id.getChildCount() > 0) {
+                    String array = array_analyze(id,
+                            table.getAllLevel(content, level).getArraySize());
+                    if (array != null)
+                        content += "@" + array;
+                    else
+                        return"";
+                }
+                Symbol temp = table.getAllLevel(content, level);
                 isScanAssgin=false;
                 System.out.print("输入" + id.getContent() + ":");
                 input = new StringBuilder(scanner.nextLine());

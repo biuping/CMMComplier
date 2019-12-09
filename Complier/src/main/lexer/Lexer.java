@@ -69,8 +69,7 @@ public class Lexer {
 
     //识别整个整数
     private static boolean isInteger(String s){
-        if (s.matches("^(\\-|\\+)?[\\s]*[0-9]\\d*$") ||s.matches("^(\\-|\\+?)0$")
-                && !s.matches("^-?0{1,}\\d+$"))
+        if (s.matches("^(\\-|\\+)?[\\s]*[0-9]\\d*$") ||s.matches("^(\\-|\\+?)0$"))
             return true;
         else
             return false;
@@ -78,8 +77,7 @@ public class Lexer {
 
     //识别浮点数
     private static boolean isReal(String s) {
-        if (s.matches("^((\\-|\\+)?[\\s]*\\d+)(\\.\\d+)+$")
-                && !s.matches("^(-?0{2,}+)(\\.\\d+)+$"))
+        if (s.matches("^((\\-|\\+)?[\\s]*\\d+)(\\.\\d+)+$"))
             return true;
         else
             return false;
