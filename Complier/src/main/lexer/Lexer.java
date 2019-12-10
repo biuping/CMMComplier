@@ -3,6 +3,8 @@ package main.lexer;
 import main.parse.PError;
 
 import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
 
 public class Lexer {
@@ -636,7 +638,8 @@ public class Lexer {
         }
 
     }
-    //TODO:当出现错误多行注释时，后面的代码将不再扫描，程序结束后判断IsNothion给出多行注释错误原因.
+
+
 
 
 }

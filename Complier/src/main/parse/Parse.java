@@ -10,6 +10,12 @@ public class Parse {
     private int index = 0;
     private Token currentToken = null;
     private int errorCount=0;
+    private ArrayList<PError> errors = new ArrayList<PError>();
+
+    public ArrayList<PError> getErrors() {
+        return errors;
+    }
+
     //语法树根节点
     private static TreeNode root;
 
@@ -164,6 +170,7 @@ public class Parse {
         //出错
         else {
             PError error = setError("程序以错误的token"+currentToken.getContent()+"开始");
+            errors.add(error);
             temp=new TreeNode("Error"+errorCount,error.toString());
             nextToken();
         }
@@ -185,6 +192,7 @@ public class Parse {
                 }
             }else {
                 PError error = setError("缺少右括号");
+                errors.add(error);
                 temp.add(new TreeNode("Error"+errorCount,error.toString()));
                 break;
             }
@@ -213,6 +221,7 @@ public class Parse {
         }else {
             //错误
             PError error = setError("if之后缺少左括号\"(\"");
+            errors.add(error);
             ifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
         //括号中的条件语句加入TreeNode
@@ -225,6 +234,7 @@ public class Parse {
             nextToken();
         }else {
             PError error = setError("if之后缺少右括号\")\"");
+            errors.add(error);
             ifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
 
@@ -259,6 +269,7 @@ public class Parse {
                 nextToken();
             }else {
                 PError error = setError("if语句缺少右大括号\"}\"");
+                errors.add(error);
                 ifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
             }
         }else {
@@ -296,6 +307,7 @@ public class Parse {
                             nextToken();
                         } else {
                             PError error = setError("else语句缺少右大括号\"}\"");
+                            errors.add(error);
                             elseNode.add(new TreeNode("Error"+errorCount, error.toString()));
                         }
                     } else {
@@ -304,6 +316,7 @@ public class Parse {
                     }
                 }else {
                     PError error =setError("if之后只能有一个else语句块");
+                    errors.add(error);
                     ifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
                 }
                 elseNum++;
@@ -325,6 +338,7 @@ public class Parse {
         }else {
             //错误
             PError error = setError("elseif之后缺少左括号\"(\"");
+            errors.add(error);
             elseifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
         //括号中的条件语句加入TreeNode
@@ -337,6 +351,7 @@ public class Parse {
             nextToken();
         }else {
             PError error = setError("elseif之后缺少右括号\")\"");
+            errors.add(error);
             elseifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
 
@@ -371,6 +386,7 @@ public class Parse {
                 nextToken();
             }else {
                 PError error = setError("if语句缺少右大括号\"}\"");
+                errors.add(error);
                 elseifTreeNode.add(new TreeNode("Error"+errorCount,error.toString()));
             }
         }else {
@@ -401,6 +417,7 @@ public class Parse {
         }else {
             //错误
             PError error = setError("while之后缺少左括号\"(\"");
+            errors.add(error);
             whileNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
         //括号中的条件语句加入TreeNode
@@ -413,6 +430,7 @@ public class Parse {
             nextToken();
         }else {
             PError error = setError("while之后缺少右括号\")\"");
+            errors.add(error);
             whileNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
         //匹配左大括号
@@ -445,6 +463,7 @@ public class Parse {
                 nextToken();
             }else {
                 PError error = setError("while循环语句缺少右大括号\"}\"");
+                errors.add(error);
                 whileNode.add(new TreeNode("Error"+errorCount,error.toString()));
             }
         }else {
@@ -476,6 +495,7 @@ public class Parse {
         }else {
             //错误
             PError error = setError("for之后缺少左括号\"(\"");
+            errors.add(error);
             forNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
         //括号后的声明语句或赋值语句
@@ -491,6 +511,7 @@ public class Parse {
             forNode.add(AD_Node);
         }else{
             PError error = setError("for声明或赋值语句出现不正确Toke "+currentToken.getContent());
+            errors.add(error);
             forNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
         //匹配第一个分号
@@ -501,6 +522,7 @@ public class Parse {
             }
         }else {
             PError error = setError("for缺少分号\";\"");
+            errors.add(error);
             forNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
         //条件语句
@@ -514,6 +536,7 @@ public class Parse {
             nextToken();
         }else {
             PError error = setError("for缺少分号\";\"");
+            errors.add(error);
             forNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
 
@@ -529,6 +552,7 @@ public class Parse {
         }else {
             //错误
             PError error = setError("for之后缺少右括号\")\"");
+            errors.add(error);
             forNode.add(new TreeNode("Error"+errorCount,error.toString()));
         }
 
@@ -562,6 +586,7 @@ public class Parse {
                 nextToken();
             }else {
                 PError error = setError("for循环语句缺少右大括号\"}\"");
+                errors.add(error);
                 forNode.add(new TreeNode(error.toString()));
             }
 
@@ -594,6 +619,7 @@ public class Parse {
         }else {
             //错误
             PError error = setError("print之后缺少左括号\"(\"");
+            errors.add(error);
             temp=new TreeNode("Error"+errorCount,error.toString());
         }
         TreeNode eNode = condition();
@@ -608,6 +634,7 @@ public class Parse {
             nextToken();
         }else {
             PError error = setError("print之后缺少右括号\")\"");
+            errors.add(error);
             if (temp==null){
                 temp=new TreeNode("Error"+errorCount,error.toString());
             }else
@@ -621,6 +648,7 @@ public class Parse {
             }
         }else {
             PError error = setError("print之后缺少分号\";\"");
+            errors.add(error);
             temp.add(new TreeNode("Error"+errorCount,error.toString()));
             return temp;
         }
@@ -640,6 +668,7 @@ public class Parse {
         }else {
             //错误
             PError error = setError("scan之后缺少左括号\"(\"");
+            errors.add(error);
             temp.add(new TreeNode("Error"+errorCount,error.toString()));
             return temp;
         }
@@ -654,6 +683,7 @@ public class Parse {
             nextToken();
         }else {
             PError error = setError("scan之后缺少右括号\")\"");
+            errors.add(error);
             temp.add(new TreeNode("Error"+errorCount,error.toString()));
             return temp;
         }
@@ -664,6 +694,7 @@ public class Parse {
                 nextToken();
             }else {
                 PError error = setError("scan之后缺少分号\";\"");
+                errors.add(error);
                 temp.add(new TreeNode("Error"+errorCount,error.toString()));
                 return temp;
             }
@@ -695,6 +726,7 @@ public class Parse {
         if (currentToken!=null && (currentToken.getTag()==Tag.SEPARATOR
             && (!currentToken.getContent().equals("[") && !currentToken.getContent().equals(";") ))){
             PError error = setError("标识符之后出现错误分割符"+currentToken.getContent());
+            errors.add(error);
             idNode.add(new TreeNode("Error"+errorCount,error.toString()));
             nextToken();
         }
@@ -715,6 +747,7 @@ public class Parse {
         }
         else {
             PError error = setError("赋值语句缺少赋值符号\"=\"");
+            errors.add(error);
             assignNode.add(new TreeNode("Error"+errorCount,error.toString()));
             return assignNode;
         }
@@ -730,6 +763,7 @@ public class Parse {
                 }
             }else {
                 PError error = setError("缺少分号\";\"");
+                errors.add(error);
                 assignNode.add(new TreeNode("Error"+errorCount,error.toString()));
                 return assignNode;
             }
@@ -767,6 +801,7 @@ public class Parse {
                 }
             }else {
                 PError error = setError("声明语句缺少分号");
+                errors.add(error);
                 declareNode.add(new TreeNode("Error"+errorCount,error.toString()));
 
             }
@@ -795,11 +830,13 @@ public class Parse {
                     && !currentToken.getContent().equals(";") && !currentToken.getContent().equals(",")
                     && currentToken.getTag()!=Tag.ASSIGN){
                 PError error = setError("声明语句出错，标识符之后出现不正确token "+currentToken.getContent());
+                errors.add(error);
                 rootNode.add(new TreeNode("Error"+errorCount,error.toString()));
                 nextToken();
             }
         }else {
             PError error = setError("声明语句标识符出错");
+            errors.add(error);
             rootNode.add(new TreeNode("Error"+errorCount,error.toString()));
             nextToken();
         }
@@ -826,12 +863,14 @@ public class Parse {
                 }
                 else {
                     PError error = setError("数组声明缺少左大括号\"{\"");
+                    errors.add(error);
                     assignNode.add(new TreeNode(error.toString()));
                 }
 
                 if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR &&
                         !currentToken.getContent().equals("}") && !isChar){
                     PError error = setError("数组声明缺少右大括号\"}\"");
+                    errors.add(error);
                     assignNode.add(new TreeNode(error.toString()));
                 }else
                     nextToken();
@@ -849,6 +888,7 @@ public class Parse {
         nextToken();
         if (currentToken!=null && !(currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";"))){
             PError error = setError("break之后缺少分号\";\"");
+            errors.add(error);
             breakNode.add(new TreeNode(error.toString()));
         }else{
             while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
@@ -867,6 +907,7 @@ public class Parse {
         nextToken();
         if (currentToken!=null && !(currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";"))){
             PError error = setError("continue之后缺少分号\";\"");
+            errors.add(error);
             continueNode.add(new TreeNode(error.toString()));
         }else{
             while (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
@@ -887,6 +928,7 @@ public class Parse {
             if (currentToken!=null && currentToken.getTag()==Tag.SEPARATOR
                     && currentToken.getContent().equals(",")){
                 PError error = setError("非法表达式的开始");
+                errors.add(error);
                 temp.add(new TreeNode(error.toString()));
             }else if (currentToken !=null && currentToken.getTag()==Tag.SEPARATOR
                     && currentToken.getContent().equals("}"))
@@ -913,6 +955,7 @@ public class Parse {
             }
         }else{
             PError error = setError("缺少分号\";\"");
+            errors.add(error);
             temp.add(new TreeNode(error.toString()));
         }
         return temp;
@@ -1090,6 +1133,7 @@ public class Parse {
                 nextToken();
             }else {
                 PError error = setError("表达式缺少右括号\")\"");
+                errors.add(error);
                 return new TreeNode("Error"+errorCount,error.toString());
             }
         }
@@ -1105,6 +1149,7 @@ public class Parse {
             nextToken();
         }else {
             PError error = setError("表达式因子出现错误或为空");
+            errors.add(error);
             if (currentToken != null &&
                     currentToken.getTag()==Tag.SEPARATOR && currentToken.getContent().equals(";")){
                 nextToken();
@@ -1134,12 +1179,14 @@ public class Parse {
                         nextToken();
                     }else {
                         PError error = setError("缺少右中括号\"]\"");
+                        errors.add(error);
                         root.add(new TreeNode("Error"+errorCount,error.toString()));
                     }
                 }
             }
         }else{
             PError error = setError("缺少左中括号\"[\"");
+            errors.add(error);
             root.add(new TreeNode("Error"+errorCount,error.toString()));
         }
     }
@@ -1158,6 +1205,7 @@ public class Parse {
             nextToken();
         }else {
             PError error = setError("加减符号出错");
+            errors.add(error);
             return new TreeNode("Error"+errorCount,error.toString());
         }
         return temp;
@@ -1177,6 +1225,7 @@ public class Parse {
             nextToken();
         }else{
             PError error = setError("乘除符号出错");
+            errors.add(error);
             return new TreeNode("Error"+errorCount,error.toString());
         }
         return temp;
@@ -1223,6 +1272,7 @@ public class Parse {
         }
         else {
             PError error = setError("无法识别符号");
+            errors.add(error);
             return new TreeNode("Error"+errorCount,error.toString());
         }
         return temp;
