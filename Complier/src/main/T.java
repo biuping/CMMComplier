@@ -1,5 +1,6 @@
 package main;
 
+import main.complierframe.TreeFrame;
 import main.lexer.Error;
 import main.lexer.Lexer;
 import main.lexer.Token;
@@ -8,16 +9,9 @@ import main.parse.TreeNode;
 import main.semantic.Semantic;
 
 import javax.swing.*;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreePath;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.List;
 
 public class T {
 

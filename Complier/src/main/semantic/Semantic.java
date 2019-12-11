@@ -1,14 +1,18 @@
 package main.semantic;
 
+import main.complierframe.ComplierFrame;
 import main.lexer.Tag;
 import main.parse.TreeNode;
+
+import javax.swing.*;
+import java.awt.*;
 
 import java.io.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-public class Semantic {
+public class Semantic extends Thread{
     // 符号表
     private SymbolTable table = new SymbolTable();
     // 语法树
@@ -39,7 +43,7 @@ public class Semantic {
     }
 
     private void setError(String reason, int line) {
-        errorNum++;
+        ++errorNum;
         SError error = new SError(reason, line, errorNum);
         errors.add(error);
     }
@@ -163,22 +167,28 @@ public class Semantic {
     private static void printEsc(String esc) {
         switch (esc) {
             case "\\\"":
-                System.out.println("\"");
+                ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                        .getText()+ "\"" + "\n");
                 break;
             case "\\\'":
-                System.out.println("'");
+                ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                        .getText() + "'" + "\n");
                 break;
             case "\\n":
-                System.out.println();
+                ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                        .getText() + "\n");
                 break;
             case "\\t":
-                System.out.println("\t");
+                ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                        .getText() +"\t" +"\n");
                 break;
             case "\\r":
-                System.out.println("\r");
+                ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                        .getText() +"\r" +"\n");
                 break;
             case "\\\\":
-                System.out.println("\\");
+                ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                        .getText() +"\\" +"\n");
                 break;
         }
     }
@@ -219,7 +229,7 @@ public class Semantic {
         }
     }
 
-    //输入赋值
+    //用户输入
     public synchronized void setInput(String input) {
         this.input = input;
         notify();
@@ -243,17 +253,19 @@ public class Semantic {
     //运行
     public void run() {
         table.removeAll();
-        System.out.println("=========语义分析=========");
         try {
             statement(root);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            System.out.println("=========语义分析结束========");
+            ComplierFrame.problemArea.append("\n");
+            ComplierFrame.problemArea.append("=========语义分析结束========\n");
             if (errorNum != 0) {
-                System.out.println("该程序中共有" + errorNum + "个语义错误！");
-                for (int i = 0; i < errors.size(); i++) {
-                    System.out.println(errors.get(i).toString());
+                JOptionPane.showMessageDialog(null,
+                        "语义分析出现错误", "Error", JOptionPane.ERROR_MESSAGE);
+                ComplierFrame.problemArea.append("该程序中共有" + errorNum + "个语义错误！\n");
+                for (SError error : errors) {
+                    ComplierFrame.problemArea.append(error.toString() + "\n");
                 }
             }
         }
@@ -1070,16 +1082,19 @@ public class Semantic {
      * @param root print节点
      */
     private void print_analyze(TreeNode root) {
+        ComplierFrame.setControlArea(Color.BLACK, false);
         int tag = root.getTag();
         String content = root.getContent();
         if (tag == Tag.INTNUM || tag == Tag.REALNUM ||
                 tag == Tag.TRUE || tag == Tag.FALSE) {
-            System.out.println(root.getContent());
+            ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                    .getText() + content + "\n");
         } else if (tag == Tag.CHAR_S || tag == Tag.STR) {
             if (isEsc_char(root.getContent()))
                 printEsc(root.getContent());
             else
-                System.out.println(root.getContent());
+                ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                        .getText() + content + "\n");
         } else if (tag == Tag.ID) {
             if (checkID(root, level)) {
                 if (root.getChildCount() > 0) {
@@ -1092,24 +1107,30 @@ public class Semantic {
                 }
                 Symbol symbol = table.getAllLevel(content, level);
                 if (symbol.getTag() == Tag.INT)
-                    System.out.println(symbol.getIntValue());
+                    ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                            .getText() + symbol.getIntValue() + "\n");
                 else if (symbol.getTag() == Tag.REAL) {
-                    System.out.println(symbol.getRealValue());
+                    ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                            .getText() + symbol.getRealValue() + "\n");
                 } else if (symbol.getTag() == Tag.STRING) {
                     if (isEsc_char(symbol.getStringValue()))
                         printEsc(symbol.getStringValue());
                     else
-                        System.out.println(symbol.getStringValue());
+                        ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                                .getText() + symbol.getStringValue() + "\n");
                 } else if (symbol.getTag() == Tag.CHAR) {
                     if (isEsc_char(symbol.getCharValue()))
                         printEsc(symbol.getCharValue());
                     else
-                        System.out.println(symbol.getCharValue());
+                        ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                                .getText() + symbol.getCharValue() + "\n");
                 } else if (symbol.getTag() == Tag.BOOL) {
                     if (symbol.getBoolValue().equals("0") || symbol.getBoolValue().equals("false"))
-                        System.out.println("false");
+                        ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                                .getText() + "false" + "\n");
                     else
-                        System.out.println("true");
+                        ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                                .getText() + "true" + "\n");
                 }
             } else {
                 if (root.getChildCount() > 0)
@@ -1124,14 +1145,17 @@ public class Semantic {
                 tag==Tag.NEG || tag==Tag.POS) {
             ExpressionPart exp = expression_analyze(root);
             if (exp != null)
-                System.out.println(exp.getResult());
+                ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                        .getText() + exp.getResult() + "\n");
         } else if (tag == Tag.EQ || tag == Tag.LE || tag == Tag.GE || tag == Tag.UE
                 || tag == Tag.LESS || tag == Tag.GREATER ||
                 tag == Tag.AND || tag == Tag.OR) {
             if (condition_analyze(root))
-                System.out.println("true");
+                ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                        .getText() + "true" + "\n");
             else
-                System.out.println("false");
+                ComplierFrame.consoleArea.setText(ComplierFrame.consoleArea
+                        .getText() + "false" + "\n");
         } else {
             setError("print对象为无法输出对象，请更正", root.getLineNum());
         }
@@ -1197,12 +1221,12 @@ public class Semantic {
      */
     private String scan_analyze(TreeNode root, String name) {
         StringBuilder input = new StringBuilder();
-        Scanner scanner = new Scanner(System.in);
         if (root.getChildCount() == 0) {
-            System.out.print("输入" + name + ":");
-            input = new StringBuilder(scanner.nextLine());
-            return input.toString();
+            ComplierFrame.setControlArea(Color.green,true);
+            String value = readInput();
+            return value;
         }else if (root.getChildAt(0).getTag()==Tag.ID){
+            ComplierFrame.setControlArea(Color.green,true);
             isScanAssgin=true;
             TreeNode id = root.getChildAt(0);
             String content=id.getContent();
@@ -1218,15 +1242,20 @@ public class Semantic {
                 Symbol temp = table.getAllLevel(content, level);
                 isScanAssgin=false;
                 System.out.print("输入" + id.getContent() + ":");
-                input = new StringBuilder(scanner.nextLine());
+                String value = readInput();
                 if (temp.getTag()==Tag.INT){
-                    if (isInteger(input.toString())){
-                        temp.setIntValue(input.toString());
-                        temp.setRealValue(String.valueOf(Double.parseDouble(input.toString())));
-                    }else if (input.toString().equals("true")){
+                    if (isInteger(value)){
+                        temp.setIntValue(value);
+                        temp.setRealValue(String.valueOf(Double.parseDouble(value)));
+                    }else if (isReal(value)){
+                        int i = (int)Double.parseDouble(value);
+                        temp.setIntValue(String.valueOf(i));
+                        temp.setRealValue(String.valueOf(i));
+                    }
+                    else if (value.equals("true")){
                         temp.setIntValue("1");
                         temp.setRealValue("1.0");
-                    }else if (input.toString().equals("false")){
+                    }else if (value.equals("false")){
                         temp.setIntValue("0");
                         temp.setRealValue("0.0");
                     }else{
@@ -1234,27 +1263,27 @@ public class Semantic {
                         return "";
                     }
                 }else if (temp.getTag()==Tag.REAL){
-                    if (isInteger(input.toString())){
-                        temp.setRealValue(String.valueOf(Double.parseDouble(input.toString())));
-                    }else if (input.toString().equals("true")){
+                    if (isInteger(value)){
+                        temp.setRealValue(String.valueOf(Double.parseDouble(value)));
+                    }else if (value.equals("true")){
                         temp.setRealValue("1.0");
-                    }else if (input.toString().equals("false")){
+                    }else if (value.equals("false")){
                         temp.setRealValue("0.0");
-                    }else if (isReal(input.toString()))
-                        temp.setRealValue(input.toString());
+                    }else if (isReal(value))
+                        temp.setRealValue(value);
                     else{
                         setError("输入内容不能赋值给real类型变量",id.getLineNum());
                         return "";
                     }
                 }else if (temp.getTag()==Tag.BOOL){
-                    if (isInteger(input.toString())||isReal(input.toString())){
-                        if (Double.parseDouble(input.toString())==0)
+                    if (isInteger(value)||isReal(value)){
+                        if (Double.parseDouble(value)==0)
                             temp.setBoolValue("0");
                         else
                             temp.setBoolValue("1");
-                    }else if (input.toString().equals("true")){
+                    }else if (value.equals("true")){
                         temp.setBoolValue("1");
-                    }else if (input.toString().equals("false")){
+                    }else if (value.equals("false")){
                         temp.setBoolValue("0");
                     }
                     else{
@@ -1262,28 +1291,45 @@ public class Semantic {
                         return "";
                     }
                 }else if (temp.getTag()==Tag.CHAR){
-                    if (isInteger(input.toString())){
-                        temp.setCharValue(String.valueOf((char)Integer.parseInt(input.toString())));
-                    }else if (input.toString().equals("true")){
+                    if (isInteger(value)){
+                        temp.setCharValue(String.valueOf((char)Integer.parseInt(value)));
+                    }else if (value.equals("true")){
                         temp.setCharValue(String.valueOf((char)1));
-                    }else if (input.toString().equals("false")){
+                    }else if (value.equals("false")){
                         temp.setCharValue(String.valueOf((char)2));
-                    }else{
-                        if (isEsc_char(input.toString()))
+                    }else if (isReal(value)){
+                        char c = (char)(int)Double.parseDouble(value);
+                        temp.setCharValue(String.valueOf(c));
+                    }
+                    else{
+                        if (isEsc_char(value))
                             temp.setCharValue(String.valueOf(input.charAt(1)));
                         else if(input.length()==1)
-                            temp.setCharValue(input.toString());
+                            temp.setCharValue(value);
                         else {
                             setError("输入内容不能赋值给int类型变量",id.getLineNum());
                             return "";
                         }
                     }
                 }else if (temp.getTag()==Tag.STRING){
-                    temp.setStringValue(input.toString());
+                    temp.setStringValue(value);
                 }
-                return input.toString();
+                return value;
             }else {
-                setError(id.getContent()+"未声明",id.getLineNum());
+                //新建变量
+                ComplierFrame.setControlArea(Color.green,true);
+                String value = readInput();
+                int newTag = 0;
+                if (isInteger(value))
+                    newTag=Tag.INT;
+                else if (isReal(value))
+                    newTag=Tag.REAL;
+                else if (value.equals("true")||value.equals("false"))
+                    newTag=Tag.BOOL;
+                else
+                    newTag=Tag.STRING;
+                Symbol symbol = new Symbol(content, newTag, id.getLineNum(), level);
+                table.addSymbol(symbol);
                 return "";
             }
         }

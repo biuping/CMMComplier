@@ -1,15 +1,16 @@
 package main.complierframe;
 
-import main.TreeFrame;
 import main.lexer.Error;
 import main.lexer.Lexer;
 import main.lexer.Token;
 import main.parse.PError;
 import main.parse.Parse;
 import main.parse.TreeNode;
+import main.semantic.Semantic;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.text.*;
 import java.awt.event.*;
 import java.io.*;
 import java.awt.*;
@@ -20,6 +21,9 @@ public class ComplierFrame extends JFrame {
 
     private ArrayList<Token> tokens;
     private int lexerErrorCount = 0;
+    private int parseErrorCount = 0;
+    private Semantic semantic;
+    private TreeNode root = null;
 
     private static JTextArea editPane;
     private final static JMenuBar MENUBAR = new JMenuBar();
@@ -27,6 +31,16 @@ public class ComplierFrame extends JFrame {
 
     private JTabbedPane tabbedPanel;
     public static JTextPane consoleArea = new JTextPane();
+    /* 用户输入 */
+    private String userInput;
+    /* 控制台列数 */
+    private static int columnNum;
+    /* 控制台行数 */
+    private static int rowNum;
+    /* 控制台最大行数 */
+    private static int presentMaxRow;
+    private static int[] index = new int[] { 0, 0 };
+    private static StyledDocument doc = null;
     /* 控制台和错误信息 */
     public static JTabbedPane proAndConPanel;
     /* 错误显示区 */
@@ -146,7 +160,7 @@ public class ComplierFrame extends JFrame {
         editPane = new JTextArea();
         editPane.setFont(treeFont);
         JPanel editPanel = new JPanel(null);
-        editPanel.setBackground(getBackground());
+        editPanel.setBackground(new Color(52, 202, 250));
         editPanel.setForeground(new Color(250, 230, 192));
         JLabel editLabel = new JLabel("|CMM程序文本编辑区");
         JPanel editLabelPanel = new JPanel(new BorderLayout());
@@ -165,6 +179,7 @@ public class ComplierFrame extends JFrame {
         proAndConPanel.add(new JScrollPane(consoleArea), "控制台");
         proAndConPanel.add(new JScrollPane(problemArea), "错误列表");
 
+        editPane.setBackground(new Color(250, 230, 192));
         editPanel.add(editLabelPanel);
         editPanel.add(editPane);
         editPanel.add(proAndConPanel);
@@ -197,7 +212,58 @@ public class ComplierFrame extends JFrame {
                         - editPanel.getWidth() + 38, 768 - TOOLBAR.getHeight()
                         - 5 - 98);
 
+        doc = consoleArea.getStyledDocument();
+        consoleArea.addKeyListener(new KeyAdapter() {
 
+            // 按下某键
+            public void keyPressed(KeyEvent e) {
+                // 获得当前的行和列位置
+                getCurrenRowAndCol();
+                if (rowNum > presentMaxRow) {
+                    presentMaxRow = rowNum;
+                }
+                if (rowNum < presentMaxRow) {
+                    consoleArea.setCaretPosition(doc.getLength());
+                    getCurrenRowAndCol();
+                }
+                if (e.getKeyChar() == KeyEvent.VK_ENTER) {
+                    consoleArea.setCaretPosition(doc.getLength());
+                }
+                if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE) {
+                    if (columnNum == 1) {
+                        setControlArea(Color.BLACK, false);
+                    }
+                }
+            }
+
+            // 释放某键
+            public void keyReleased(KeyEvent e) {
+                // 获得当前的行和列位置
+                getCurrenRowAndCol();
+                if (rowNum > presentMaxRow) {
+                    presentMaxRow = rowNum;
+                }
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    // 获得光标相对0行0列的位置
+                    int pos = consoleArea.getCaretPosition();
+                    index[0] = index[1];
+                    index[1] = pos;
+                    try {
+                        userInput = doc.getText(index[0], index[1] - 1
+                                - index[0]);
+                        semantic.setInput(userInput);
+                    } catch (BadLocationException e1) {
+                        e1.printStackTrace();
+                    }
+                    setControlArea(Color.BLACK, false);
+                }
+                if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE) {
+                    if (rowNum <= presentMaxRow) {
+                        consoleArea.setEditable(true);
+                    }
+                }
+            }
+        });
         myEvent();
 
     }
@@ -218,6 +284,10 @@ public class ComplierFrame extends JFrame {
         parseButton.addActionListener(e->parseRun());
 
         parseItem.addActionListener(e->parseRun());
+
+        runItem.addActionListener(e->semanticRun());
+
+        runButton.addActionListener(e->semanticRun());
 
     }
 
@@ -270,9 +340,7 @@ public class ComplierFrame extends JFrame {
 
     //词法分析
     private void lexerRun(){
-        tokens=null;
-        lexerErrorCount=0;
-        problemArea.setText("");
+        clear();
         String line = editPane.getText();
         String[] lines = line.split("\n");
         Lexer lexer = new Lexer();
@@ -281,8 +349,8 @@ public class ComplierFrame extends JFrame {
         }
         tokens = lexer.getTokens();
         JTextArea textArea = new JTextArea();
-        textArea.setFont(lexerFont);
         textArea.setBackground(new Color(45, 57, 73));
+        textArea.setFont(lexerFont);
         for (Token token : tokens) {
             textArea.append(token.toString() + "\n");
         }
@@ -302,16 +370,11 @@ public class ComplierFrame extends JFrame {
 
     //语法分析
     private void parseRun(){
-        if (tokens.isEmpty()){
-            JOptionPane.showMessageDialog(null, "请先进行词法分析",
-                    "提示", JOptionPane.INFORMATION_MESSAGE);
-        }else if (lexerErrorCount>0){
-            JOptionPane.showMessageDialog(null, "请先解决词法分析错误",
-                    "提示", JOptionPane.WARNING_MESSAGE);
-        }
-        else {
+        lexerRun();
+        if (lexerErrorCount == 0){
+            parseErrorCount=0;
             Parse parse = new Parse(tokens);
-            TreeNode root = parse.runParse();
+            root = parse.runParse();
             DefaultTreeModel model = new DefaultTreeModel(root);
             JTree parserTree = new JTree(model);
             // 设置该JTree使用自定义的节点绘制器
@@ -321,9 +384,9 @@ public class ComplierFrame extends JFrame {
             parserTree.setShowsRootHandles(true);
             // 设置节点是否可见,默认是true
             parserTree.setRootVisible(true);
-            parserTree.setBackground(new Color(97, 157, 226));
             tabbedPanel.setComponentAt(1,new JScrollPane(parserTree));
-            if (parse.getErrorCount()>0){
+            parseErrorCount = parse.getErrorCount();
+            if (parseErrorCount>0){
                 ArrayList<PError> errors = parse.getErrors();
                 problemArea.setText("**********语法分析出现"+errors.size()+"个错误**********\n");
                 JOptionPane.showMessageDialog(null, "语法分析出现错误", "Error", JOptionPane.ERROR_MESSAGE);
@@ -332,7 +395,84 @@ public class ComplierFrame extends JFrame {
                 }
             }
         }
+    }
 
+    //语义分析
+    private void semanticRun(){
+        lexerRun();
+        if (lexerErrorCount==0){
+            parseRun();
+        }
+        if (root!=null && parseErrorCount==0){
+            semantic = new Semantic(root);
+            semantic.start();
+            int count = semantic.getErrors().size();
+            System.out.println(count);
+
+        }
+    }
+
+    // 改变controlArea的颜色与编辑属性
+    public static void setControlArea(Color c, boolean edit) {
+        proAndConPanel.setSelectedIndex(0);
+        consoleArea.setFocusable(true);
+        consoleArea.setForeground(c);
+        consoleArea.setEditable(edit);
+    }
+
+    //获取控制台行和列
+    private void getCurrenRowAndCol() {
+        int row = 0;
+        int col = 0;
+        // 获得光标相对0行0列的位置
+        int pos = consoleArea.getCaretPosition();
+        Element root = consoleArea.getDocument().getDefaultRootElement();
+        int index = root.getElementIndex(doc.getParagraphElement(pos)
+                .getStartOffset());
+        // 列
+        try {
+            col = pos
+                    - doc.getText(0, doc.getLength()).substring(0, pos)
+                    .lastIndexOf("\n");
+        } catch (BadLocationException e) {
+            e.printStackTrace();
+        }
+        // 行
+        try {
+            // 返回行是从0算起的,所以+1
+            row = Integer.parseInt(String.valueOf(index + 1));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        rowNum = row;
+        columnNum = col;
+        presentMaxRow = root.getElementIndex(doc.getParagraphElement(
+                doc.getLength()).getStartOffset()) + 1;
+    }
+
+    //清理
+    private void clear(){
+        lexerErrorCount=0;
+        parseErrorCount=0;
+        if (tokens!=null){
+            tokens.clear();
+        }
+        semantic=null;
+        root=null;
+        problemArea.setText("");
+        consoleArea.setText("");
+        JTextArea textArea = new JTextArea();
+        tabbedPanel.setComponentAt(0,textArea);
+        DefaultTreeModel model = new DefaultTreeModel(root);
+        JTree parserTree = new JTree(model);
+        // 设置该JTree使用自定义的节点绘制器
+        parserTree.setCellRenderer(new JTreeRenderer());
+
+        // 设置是否显示根节点的“展开/折叠”图标,默认是false
+        parserTree.setShowsRootHandles(true);
+        // 设置节点是否可见,默认是true
+        parserTree.setRootVisible(true);
+        tabbedPanel.setComponentAt(1,new JScrollPane(parserTree));
     }
 
     public static void main(String args[]){
