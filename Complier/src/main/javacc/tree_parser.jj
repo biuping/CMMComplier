@@ -1,0 +1,291 @@
+options
+{
+  static = true;
+}
+
+PARSER_BEGIN(MyNewGrammar)
+package cc;//指定生成代码存放的包名
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+public class MyNewGrammar
+{
+  public static void main(String args []) throws ParseException, FileNotFoundException
+  {
+    BufferedReader br = new BufferedReader(new FileReader("D:\\test.txt"));
+    MyNewGrammar parser = new MyNewGrammar(System.in);
+    while (true)
+    {
+      System.out.println("Reading from standard input...");
+      System.out.print("input:");
+      try
+      {
+        MyNewGrammar.stm();
+      }
+      catch (Exception e)
+      {
+        System.out.println("NOK.");
+        System.out.println(e.getMessage());
+        MyNewGrammar.ReInit(System.in);
+      }
+      catch (Error e)
+      {
+        System.out.println("Oops.");
+        System.out.println(e.getMessage());
+        break;
+      }
+    }
+  }
+}
+PARSER_END(MyNewGrammar)
+
+SKIP : /* WHITE SPACE */
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+| "\f"
+}
+
+SPECIAL_TOKEN : /* COMMENTS */
+{
+  <SINGLE_LINE_COMMENT: "//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
+| <FORMAL_COMMENT: "/**" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
+| <MULTI_LINE_COMMENT: "/*" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
+}
+
+TOKEN : /* RESERVED WORDS AND LITERALS */
+{
+  < CONTINUE: "continue">
+| < BREAK: "break" >
+| < CHAR: "char" >
+| < REAL: "real" >
+| < ELSE: "else" >
+| < FOR: "for" >
+| < IF: "if" >
+| < INT: "int" >
+| < WHILE: "while" >
+| < READ : "read" >
+| < WRITE : "write" >
+}
+
+TOKEN : /* LITERALS */
+{
+  <INT_LITERAL: ["0"-"9"] (["0"-"9"])* (["l","L"])? >
+|
+  <REAL_LITERAL: (["0"-"9"])+ "." (["0"-"9"])* (<EXPONENT>)? (["f","F","d","D"])? | "." (["0"-"9"])+ (<EXPONENT>)? (["f","F","d","D"])? | (["0"-"9"])+ <EXPONENT> (["f","F","d","D"])? | (["0"-"9"])+ (<EXPONENT>)? ["f","F","d","D"]>
+|
+  < #EXPONENT: ["e","E"] (["+","-"])? (["0"-"9"])+ >
+|
+  < CHAR_LITERAL:
+      "'"
+      (   (~["'","\\","\n","\r"])
+        | ("\\"
+            ( ["n","t","b","r","f","\\","'","\""]
+            | ["0"-"7"] ( ["0"-"7"] )?
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+            )
+          )
+      )
+      "'"
+  >
+|
+  < STRING_LITERAL:
+      "\""
+      (   (~["\"","\\","\n","\r"])
+        | ("\\"
+            ( ["n","t","b","r","f","\\","'","\""]
+            | ["0"-"7"] ( ["0"-"7"] )?
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+            )
+          )
+      )*
+      "\""
+  >
+}
+
+TOKEN : /* IDENTIFIERS */
+{
+  < ID: <LETTER> (<LETTER>|<DIGIT>|"_")* >
+|
+  < #LETTER:
+      [
+       "A"-"Z",
+       "a"-"z"
+      ]
+  >
+|
+  < #DIGIT:
+      [
+       "0"-"9"
+      ]
+  >
+}
+
+TOKEN : /* SEPARATORS */
+{
+  < LPARENT: "(" >
+| < RPARENT: ")" >
+| < LBRACE: "{" >
+| < RBRACE: "}" >
+| < LBRACKET: "[" >
+| < RBRACKET: "]" >
+| < SEMI: ";" >
+| < COMMA: "," >
+| < DOT: "." >
+}
+
+TOKEN : /* OPERATORS */
+{
+  < ASSIGN: "=" >
+| < GT: ">" >
+| < LT: "<" >
+| < NOT: "!" >
+| < COLON: ":" >
+| < EQ: "==" >
+| < LE: "<=" >
+| < GE: ">=" >
+| < NE: "<>" >
+| < OR: "||" >
+| < AND: "&&" >
+| < PLUS: "+" >
+| < MINUS: "-" >
+| < MULTI: "*" >
+| < DIVIDE: "/" >
+| < BIT_AND: "&" >
+| < BIT_OR: "|" >
+}
+
+void program():
+{}
+{
+  (stm())+
+}
+
+void block():
+{}
+{
+  < LBRACE > program() < RBRACE >
+}
+
+void stm() :
+{}
+{
+	 if_stm()
+	|while_stm()
+	|for_stm()
+	|block()
+	|read_stm()< SEMI >
+	|write_stm()< SEMI >
+	|assign_stm()< SEMI >
+	|declare_stm()< SEMI >
+	|control_stm()< SEMI >
+	|< SEMI >
+}
+
+void if_stm():
+{}
+{
+	< IF >< LPARENT > condition() < RPARENT > stm()
+}
+
+void while_stm():
+{}
+{
+  < WHILE >< LPARENT > condition() < RPARENT > stm()
+}
+
+void read_stm():
+{}
+{
+	< READ > < LPARENT > < ID > < RPARENT >
+}
+
+void write_stm():
+{}
+{
+	< WRITE > < LPARENT > express_stm() < RPARENT >
+}
+
+void for_stm():
+{}
+{
+ 	< FOR>< LPARENT > (declare_stm()|assign_stm())? < SEMI > (condition())? < SEMI > (assign_stm())? < RPARENT >
+}
+
+void assign_stm():
+{}
+{
+	< ID > < ASSIGN > express_stm()
+}
+
+void declare_stm():
+{}
+{
+	class_stm()
+	< ID > (< ASSIGN > express_stm())?
+	(
+		< COMMA > < ID > (< ASSIGN > express_stm())?	)?
+  
+}
+
+void class_stm():
+{}
+{
+   < INT >|< CHAR >|< REAL>
+}
+
+void condition():
+{}
+{
+	express_stm() comparison_op() express_stm()
+}
+
+void express_stm():
+{}
+{
+	term() (add_op() term())*
+}
+
+void term():
+{}
+{
+  	factor() (mul_op() factor())*
+}
+
+void factor():
+{}
+{
+	< INT_LITERAL >|< REAL_LITERAL>|< CHAR_LITERAL>|< ID > (array())*
+}
+
+void array():
+{}
+{
+  	< LBRACKET > express_stm() < RBRACKET >
+}
+
+void comparison_op():
+{}
+{
+	< LT >|< GT >|< EQ >|< NE >|< LE >|< GE >
+}
+
+void add_op():
+{}
+{
+	< PLUS >|< MINUS >
+}
+
+void mul_op():
+{}
+{
+	< MULTI >|< DIVIDE>
+}
+
+void control_stm():
+{}
+{
+	< BREAK > | < CONTINUE >
+}

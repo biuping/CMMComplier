@@ -405,7 +405,7 @@ public class ComplierFrame extends JFrame {
         }
         if (root!=null && parseErrorCount==0){
             semantic = new Semantic(root);
-            semantic.start();
+            semantic.run();
             int count = semantic.getErrors().size();
             System.out.println(count);
 

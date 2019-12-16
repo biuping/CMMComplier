@@ -7,6 +7,7 @@ public class ExpressionPart {
     private String result;
     private boolean isInt;
     private boolean isString;
+    private int childCount;
 
     public ExpressionPart(){
         children=new String[2];
@@ -33,6 +34,15 @@ public class ExpressionPart {
 
     public void setChild(String s,int i){
         children[i]=s;
+    }
+
+    public int getChildCount(){
+        int count=0;
+        for (int i=0;i<children.length;i++){
+            if (children[i]!=null)
+                count++;
+        }
+        return count;
     }
 
     public String getChild(int i){

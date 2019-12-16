@@ -1,0 +1,266 @@
+PARSER_BEGIN(CMMParse)
+
+import java.util.*;
+
+public class CMMParse{
+public static void main(String[] args) throws ParseException{
+        CMMParse parse = new CMMParse(System.in);
+        parse.Start();
+    }
+}
+
+PARSER_END(CMMParse)
+
+SKIP : {
+    " "
+    |  "\t"
+    |  "\n"
+    |  "\r"
+    |  <"//" (~["\n","\r"])* ("\n" | "\r" | "\r\n")>
+    |  <"/*" (~["*"])* "*" ("*" | ~["*","/"] (~["*"])* "*")* "/">
+}
+
+//--------------------开始进行词法分析--------------------
+//定义关键字
+TOKEN : {
+    <IF: "if">
+    | <ELSE: "else">
+    | <WHILE: "while">
+    | <SCAN: "scan">
+    | <PRINT: "print">
+    | <INT: "int">
+    | <REAL: "real">
+    | <BREAK: "break">
+    | <FOR: "for">
+    | <CHAR: "char">
+    | <BOOL: "bool">
+    | <STRING: "string">
+    | <TRUE: "true">
+    | <FALSE: "false">
+}
+
+//定义整型数
+TOKEN : {
+	<INTEGER_LITERAL: ["0"-"9"](<DIGIT>)*>
+}
+
+//定义实数
+TOKEN : {
+	<REAL_LITERAL: (<DIGIT>)+
+	| (<DIGIT>)+"."
+	| (<DIGIT>)+"."(<DIGIT>)+
+	| "."(<DIGIT>)+>
+}
+
+//定义标识符
+TOKEN : {
+	<ID: <LETTER>
+	| <LETTER>(<LETTER> | <DIGIT> | "_")*(<LETTER> | <DIGIT>)+>
+	| <#LETTER: ["a"-"z", "A"-"Z"]>
+	| <#DIGIT: ["0"-"9"]>
+}
+
+//定义字符串
+TOKEN : {
+    <STRING_LITERAL:
+           "\""
+           (   (~["\"","\\","\n","\r"])
+             | ("\\"
+                 ( ["n","t","b","r","f","\\","'","\""]
+                 | ["0"-"7"] ( ["0"-"7"] )?
+                 | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+                 )
+               )
+           )*
+           "\""
+       >
+}
+
+//定义字符
+TOKEN :
+{
+  <  CHAR_LITERAL :
+    "'"
+      (   (~["'","\\","\n","\r"])
+        | ("\\"
+            ( ["n","t","b","r","f","\\","'","\""]
+            | ["0"-"7"] ( ["0"-"7"] )?
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+            )
+          )
+      )
+      "'"
+    >
+}
+
+//分隔符
+TOKEN :
+{
+  < LPARENT: "(" >
+| < RPARENT: ")" >
+| < LBRACE: "{" >
+| < RBRACE: "}" >
+| < LBRACKET: "[" >
+| < RBRACKET: "]" >
+| < SEMI: ";" >
+| < COMMA: "," >
+| < DOT: "." >
+}
+
+//操作符
+TOKEN :
+{
+  < ASSIGN: "=" >
+| < GT: ">" >
+| < LT: "<" >
+| < EQ: "==" >
+| < LE: "<=" >
+| < GE: ">=" >
+| < UE: "<>" >
+| < OR: "||" >
+| < AND: "&&" >
+| < ADD: "+" >
+| < SUB: "-" >
+| < MUL: "*" >
+| < DIVIDE: "/" >
+| < BIT_AND: "&" >
+| < BIT_OR: "|" >
+| <NEG: "-" >
+| <POS: "+">
+}
+
+void program():{}
+{
+  (Statement())+
+}
+
+
+void Statement() : {}
+{
+    declare()
+    | assign_sta()
+//    | <WHILE> "(" Condition() ")" Statement()
+//    | <SCAN> "(" <IDENTIFIER> ")" ";"
+//    | <PRINT> "(" Condition() ")" ";"
+//    | <FOR> "(" Declaration()|Assignment() ";" Condition() ";" Assignment() ")" Statement()
+//    | <IF> "(" Condition() ")" Statement()
+    | block_sta()
+    | if_sta()
+    | while_sta()
+    | for_sta()
+    | print_sta()
+    | scan_sta()
+    | break_sta()
+    | continue_sta()
+    | condition_top()
+}
+
+void declare_stm():{}
+{
+	(<INT>|<CHAR>|<REAL>|<BOOL>|<STRING>)
+	(declare_sub()<COMMA>)?<SEMI>
+}
+
+void declare_sub():{}
+{
+    < ID > <ASSIGN>condition()
+    |<ID>array()<ASSIGN><LBRACE>arrayDeclare()
+    |<ID>array()<ASSIGN>condition()
+    |<ID><ASSIGN>condition()
+}
+
+void array():{}
+{
+    <LBRACKET>expression()<RBRACKET>
+}
+
+void arrayDeclare():{}
+{
+    condition()
+    (<SEMI>condition())?
+    <RBRACE>
+}
+
+//保证非括号情况OR优先级
+void condition():{}
+{
+    firstCondition()(
+    <OR> firstCondition()
+    )?
+}
+
+//保证非括号情况AND优先级
+void firstCondition():{}
+{
+    secondCondition()(
+        <AND> secondCondition()
+    )?
+}
+
+void secondCondition():{}
+{
+    thirdCondition()(
+        <BIT_OR> thirdCondition()
+    )?
+}
+
+void thirdCondition():{}
+{
+    fourthCondition()(
+        <BIT_AND> fourthCondition()
+        )?
+}
+
+void fourthCondition():{}
+{
+    expression()(
+        <EQ>
+        |<UE>
+        |<LE>
+        |<GE>
+        |<LT>
+        |<GT>
+         expression()
+        )?
+}
+
+//+ -
+void expression():{}
+{
+    mdexperssion()(
+        <ADD>
+        |<SUB>
+         mdexperssion()
+        )?
+}
+
+// * /
+void mdexpression():{}
+{
+    factor()(
+        <MUL>
+        |<DIVIDE>
+         factor()
+        )?
+}
+
+void factor():{}
+{
+    < INT_LITERAL >
+    |< REAL_LITERAL>
+    |< CHAR_LITERAL>
+    |<STRING_LITERAL>
+    |<TRUE>
+    |<FALSE>
+    |<ID>
+    |scan_sta()
+    |<ID>array()
+    |<LPARENT>condition()<RPARENT>
+    |<NEG>factor()
+    |<POS>factor()
+}
+
+void block_sta():{}
+{
+  < LBRACE > Statement() < RBRACE >
+}

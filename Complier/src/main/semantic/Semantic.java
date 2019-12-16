@@ -1916,7 +1916,8 @@ public class Semantic extends Thread{
         boolean isNegative = false;
         boolean isNP = false;   //正负号
         ExpressionPart part = new ExpressionPart();
-        for (int i = 0; i < root.getChildCount(); i++) {
+        int count = root.getChildCount();
+        for (int i = 0; i < count; i++) {
             TreeNode temp = root.getChildAt(i);
             //声明语句或赋值语句处理正负号时，传入的root为正负结点，更改temp为root
             if (rootTag == Tag.NEG || rootTag == Tag.POS) {
@@ -2071,7 +2072,7 @@ public class Semantic extends Thread{
                     || tag == Tag.BOR || tag == Tag.BAND) {
                 ExpressionPart exp;
                 if (isNP)
-                    exp = expression_analyze(root.getChildAt(i).getChildAt(0));
+                    exp = expression_analyze(root.getChildAt(0));
                 else
                     exp = expression_analyze(root.getChildAt(i));
                 if (exp != null) {
@@ -2088,9 +2089,21 @@ public class Semantic extends Thread{
                 } else
                     part.setChild("0", i);
             }
+//            if (isNP&&temp.getChildCount()>1){
+//                ExpressionPart exp = expression_analyze(root.getChildAt(i).getChildAt(1));
+//                if (exp != null) {
+//                    part.setChild(exp.getResult(), i+1);
+//                    if (exp.getTag() == Tag.REAL)
+//                        part.setIsInt(false);
+//                } else
+//                    return null;
+//            }
         }
-        if (root.getChildCount() == 1 &&
-                (rootTag == Tag.NEG || rootTag == Tag.POS)) {
+        if (part.getChildCount()==1){
+            if (rootTag==Tag.NEG){
+                part.setResult("-"+part.getChild1());
+                return part;
+            }
             part.setResult(part.getChild1());
             return part;
         }

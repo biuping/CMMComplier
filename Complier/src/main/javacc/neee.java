@@ -1,6 +1,4 @@
-package main.java;
-
-import java.util.Scanner;
+package main.javacc;
 
 public class neee {
 
@@ -47,11 +45,8 @@ public class neee {
     }
 
     public static void main(String args[]){
-        int m,n;
-        n=6;m=00000;
-        double d = 000.000;
-        String s = "ffww";
-        System.out.println(s.length());
+        String[] s = new String[2];
+        System.out.println(s[1]);
 
     }
 }
