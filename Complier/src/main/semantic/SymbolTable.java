@@ -2,6 +2,11 @@ package main.semantic;
 
 import java.util.Vector;
 
+/***
+ * @author 毕修平
+ * 语义分析状态表
+ */
+
 public class SymbolTable {
     private Vector<Symbol> symbolTable = new Vector<Symbol>();
 

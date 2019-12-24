@@ -1,5 +1,9 @@
 package main.lexer;
 
+/***
+ * @author 毕修平
+ * 词法分析错误处理
+ */
 public class Error {
     private String reason;
     private String value;

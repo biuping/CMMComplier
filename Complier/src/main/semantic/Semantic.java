@@ -12,6 +12,11 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+/***
+ * @author 毕修平
+ * 语义分析
+ */
+
 public class Semantic extends Thread{
     // 符号表
     private SymbolTable table = new SymbolTable();

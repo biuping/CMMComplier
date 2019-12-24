@@ -1,8 +1,8 @@
 package main.lexer;
-
-import java.util.Dictionary;
-import java.util.HashMap;
-
+/***
+ * @author 毕修平
+ * Tag值
+ */
 public class Tag {
     /**
      *  statement=0,condition=1,declare=2,assign=3 block=4

@@ -1,5 +1,8 @@
 package main.lexer;
-
+/***
+ * @author 毕修平
+ * 词法Token
+ */
 public class Token {
     private final int tag;
     private String content;

@@ -2,6 +2,11 @@ package main.semantic;
 
 import java.util.ArrayList;
 
+/***
+ * @author 毕修平
+ * 语义分析循环处理
+ */
+
 public class CycleUtil {
     private ArrayList<Integer> levelList;   //存储循环作用域
     private ArrayList<Integer> cLevelList;  //continue使用的作用域集合

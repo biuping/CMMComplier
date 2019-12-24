@@ -1,12 +1,36 @@
+options
+{
+  static = true;
+}
 PARSER_BEGIN(CMMParse)
-
+package main.javacc;//the package for saving code
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.util.*;
 
 public class CMMParse{
-public static void main(String[] args) throws ParseException{
-        CMMParse parse = new CMMParse(System.in);
-        parse.Start();
+public static void main(String[] args) throws ParseException ,FileNotFoundException{
+    BufferedReader br = new BufferedReader(new FileReader("D:\\test.txt"));
+    CMMParse parse = new CMMParse(System.in);
+    while (true){
+        System.out.println("Reading from standard input...");
+        System.out.print("input:");
+        try{
+            CMMParse.program();
+        }
+        catch (Exception e){
+            System.out.println("NOK.");
+            System.out.println(e.getMessage());
+            CMMParse.ReInit(System.in);
+        }
+        catch (Error e){
+            System.out.println("Oops.");
+            System.out.println(e.getMessage());
+            break;
+        }
     }
+  }
 }
 
 PARSER_END(CMMParse)
@@ -31,6 +55,7 @@ TOKEN : {
     | <INT: "int">
     | <REAL: "real">
     | <BREAK: "break">
+    | <CONTINUE: "continue">
     | <FOR: "for">
     | <CHAR: "char">
     | <BOOL: "bool">
@@ -54,10 +79,9 @@ TOKEN : {
 
 //定义标识符
 TOKEN : {
-	<ID: <LETTER>
-	| <LETTER>(<LETTER> | <DIGIT> | "_")*(<LETTER> | <DIGIT>)+>
-	| <#LETTER: ["a"-"z", "A"-"Z"]>
-	| <#DIGIT: ["0"-"9"]>
+	<ID: <LETTER> (<LETTER>|<DIGIT>|"_")* >
+       |< #LETTER:["A"-"Z","a"-"z"]>
+       |< #DIGIT:["0"-"9"]>
 }
 
 //定义字符串
@@ -125,8 +149,6 @@ TOKEN :
 | < DIVIDE: "/" >
 | < BIT_AND: "&" >
 | < BIT_OR: "|" >
-| <NEG: "-" >
-| <POS: "+">
 }
 
 void program():{}
@@ -137,13 +159,8 @@ void program():{}
 
 void Statement() : {}
 {
-    declare()
+    declare_sta()
     | assign_sta()
-//    | <WHILE> "(" Condition() ")" Statement()
-//    | <SCAN> "(" <IDENTIFIER> ")" ";"
-//    | <PRINT> "(" Condition() ")" ";"
-//    | <FOR> "(" Declaration()|Assignment() ";" Condition() ";" Assignment() ")" Statement()
-//    | <IF> "(" Condition() ")" Statement()
     | block_sta()
     | if_sta()
     | while_sta()
@@ -155,18 +172,18 @@ void Statement() : {}
     | condition_top()
 }
 
-void declare_stm():{}
+void declare_sta():{}
 {
 	(<INT>|<CHAR>|<REAL>|<BOOL>|<STRING>)
-	(declare_sub()<COMMA>)?<SEMI>
+	(declare_sub()<COMMA>)*(<SEMI>)+
 }
 
 void declare_sub():{}
 {
-    < ID > <ASSIGN>condition()
-    |<ID>array()<ASSIGN><LBRACE>arrayDeclare()
-    |<ID>array()<ASSIGN>condition()
-    |<ID><ASSIGN>condition()
+    < ID > (
+    <ASSIGN> condition()
+    | array() <ASSIGN> ((<LBRACE>arrayDeclare()<RBRACE>)|condition())
+    )
 }
 
 void array():{}
@@ -177,8 +194,65 @@ void array():{}
 void arrayDeclare():{}
 {
     condition()
-    (<SEMI>condition())?
-    <RBRACE>
+    (<SEMI>condition())*
+}
+
+void assign_sta():{}
+{
+    <ID><ASSIGN>condition()(<SEMI>)+
+}
+
+void if_sta():{}
+{
+    <IF>< LPARENT > condition() < RPARENT > Statement()
+    (<ELSE><IF> < LPARENT > condition() < RPARENT > Statement())*
+    (<ELSE>Statement())?
+}
+
+void while_sta():{}
+{
+    <WHILE>< LPARENT > condition() < RPARENT > Statement()
+}
+
+void for_sta():{}
+{
+    <FOR>< LPARENT >(assign_sta()|declare_sta())<SEMI> condition()<SEMI>
+     assign_sta()< RPARENT > Statement()
+}
+
+void scan_sta():
+{}
+{
+	< SCAN > < LPARENT > (< ID >(array())?|<STRING_LITERAL>)? < RPARENT >(<SEMI>)*
+}
+
+void print_sta():
+{}
+{
+	< PRINT > < LPARENT > condition() < RPARENT >(<SEMI>)+
+}
+
+void block_sta():{}
+{
+  < LBRACE > Statement() < RBRACE >
+}
+
+void break_sta():{}
+{
+    <BREAK>(<SEMI>)+
+}
+
+void continue_sta():{}
+{
+    <CONTINUE>(<SEMI>)+
+}
+
+
+void condition_top():{}
+{
+    condition()(
+    <SEMI>
+    )+
 }
 
 //保证非括号情况OR优先级
@@ -186,7 +260,7 @@ void condition():{}
 {
     firstCondition()(
     <OR> firstCondition()
-    )?
+    )*
 }
 
 //保证非括号情况AND优先级
@@ -194,73 +268,80 @@ void firstCondition():{}
 {
     secondCondition()(
         <AND> secondCondition()
-    )?
+    )*
 }
 
 void secondCondition():{}
 {
     thirdCondition()(
         <BIT_OR> thirdCondition()
-    )?
+    )*
 }
 
 void thirdCondition():{}
 {
     fourthCondition()(
         <BIT_AND> fourthCondition()
-        )?
+        )*
 }
 
 void fourthCondition():{}
 {
     expression()(
-        <EQ>
-        |<UE>
-        |<LE>
-        |<GE>
-        |<LT>
-        |<GT>
-         expression()
-        )?
+        comparison_op()
+        expression()
+        )*
 }
 
 //+ -
 void expression():{}
 {
-    mdexperssion()(
-        <ADD>
-        |<SUB>
-         mdexperssion()
-        )?
+    mdexpression()(
+        as_op()
+        mdexpression()
+        )*
 }
 
 // * /
 void mdexpression():{}
 {
     factor()(
-        <MUL>
-        |<DIVIDE>
-         factor()
-        )?
+        md_op()
+        factor()
+        )*
 }
 
 void factor():{}
 {
-    < INT_LITERAL >
+    < INTEGER_LITERAL >
     |< REAL_LITERAL>
     |< CHAR_LITERAL>
     |<STRING_LITERAL>
     |<TRUE>
     |<FALSE>
-    |<ID>
+    |<ID>(array())?
     |scan_sta()
-    |<ID>array()
     |<LPARENT>condition()<RPARENT>
-    |<NEG>factor()
-    |<POS>factor()
 }
 
-void block_sta():{}
+void comparison_op():{}
 {
-  < LBRACE > Statement() < RBRACE >
+    <EQ>
+    |<UE>
+    |<LE>
+    |<GE>
+    |<LT>
+    |<GT>
+}
+
+void as_op():{}
+{
+    <ADD>
+    |<SUB>
+}
+
+void md_op():{}
+{
+    <MUL>
+    |<DIVIDE>
 }

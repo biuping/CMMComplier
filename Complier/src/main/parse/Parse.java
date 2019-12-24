@@ -4,7 +4,10 @@ import main.lexer.Tag;
 import main.lexer.Token;
 
 import java.util.ArrayList;
-
+/***
+ * @author 毕修平
+ * 语法分析
+ */
 public class Parse {
     private ArrayList<Token> tokens;
     private int index = 0;

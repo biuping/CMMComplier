@@ -1,7 +1,10 @@
 package main.parse;
 
 import javax.swing.tree.DefaultMutableTreeNode;
-
+/***
+ * @author 毕修平
+ * 词法分析树
+ */
 public class TreeNode extends DefaultMutableTreeNode {
     private String kind;
     private String content;

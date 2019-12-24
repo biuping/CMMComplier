@@ -1,12 +1,13 @@
 package main.lexer;
 
-import main.parse.PError;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
-
+/***
+ * @author 毕修平
+ * 词法分析
+ */
 public class Lexer {
     // 注释的标志
     private boolean isNotation = false;

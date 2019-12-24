@@ -1,5 +1,10 @@
 package main.semantic;
 
+/***
+ * @author 毕修平
+ * 语义分析错误处理
+ */
+
 public class SError {
     private String content;
     private int lineNum;

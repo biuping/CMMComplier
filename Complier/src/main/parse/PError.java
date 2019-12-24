@@ -1,5 +1,8 @@
 package main.parse;
-
+/***
+ * @author 毕修平
+ * 语法分析错误处理
+ */
 public class PError {
     private String content;
     private int lineNum;

@@ -2,6 +2,11 @@ package main.semantic;
 
 import main.lexer.Tag;
 
+/***
+ * @author 毕修平
+ * 语义分析用于计算对象
+ */
+
 public class ExpressionPart {
     private String[] children=new String[2];
     private String result;

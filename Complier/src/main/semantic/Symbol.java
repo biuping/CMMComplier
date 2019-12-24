@@ -1,5 +1,10 @@
 package main.semantic;
 
+/***
+ * @author 毕修平
+ * 语义分析状态表中单个状态
+ */
+
 public class Symbol {
     // 名字
     private String name;
