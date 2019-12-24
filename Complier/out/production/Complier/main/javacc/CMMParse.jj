@@ -79,7 +79,7 @@ TOKEN : {
 
 //定义标识符
 TOKEN : {
-	<IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>|"_")* >
+	<ID: <LETTER> (<LETTER>|<DIGIT>|"_")* >
        |< #LETTER:["A"-"Z","a"-"z"]>
        |< #DIGIT:["0"-"9"]>
 }
@@ -146,7 +146,7 @@ TOKEN :
 | < ADD: "+" >
 | < SUB: "-" >
 | < MUL: "*" >
-| < DIVIDENTIFIERE: "/" >
+| < DIVIDE: "/" >
 | < BIT_AND: "&" >
 | < BIT_OR: "|" >
 }
@@ -180,7 +180,7 @@ void declare_sta():{}
 
 void declare_sub():{}
 {
-    < IDENTIFIER > (
+    < ID > (
     <ASSIGN> condition()
     | array() <ASSIGN> ((<LBRACE>arrayDeclare()<RBRACE>)|condition())
     )
@@ -199,7 +199,7 @@ void arrayDeclare():{}
 
 void assign_sta():{}
 {
-    <IDENTIFIER><ASSIGN>condition()(<SEMI>)+
+    <ID><ASSIGN>condition()(<SEMI>)+
 }
 
 void if_sta():{}
@@ -223,7 +223,7 @@ void for_sta():{}
 void scan_sta():
 {}
 {
-	< SCAN > < LPARENT > (< IDENTIFIER >(array())?|<STRING_LITERAL>)? < RPARENT >(<SEMI>)*
+	< SCAN > < LPARENT > (< ID >(array())?|<STRING_LITERAL>)? < RPARENT >(<SEMI>)*
 }
 
 void print_sta():
@@ -319,7 +319,7 @@ void factor():{}
     |<STRING_LITERAL>
     |<TRUE>
     |<FALSE>
-    |<IDENTIFIER>(array())?
+    |<ID>(array())?
     |scan_sta()
     |<LPARENT>condition()<RPARENT>
 }
@@ -343,5 +343,5 @@ void as_op():{}
 void md_op():{}
 {
     <MUL>
-    |<DIVIDENTIFIERE>
+    |<DIVIDE>
 }
