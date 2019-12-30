@@ -25,9 +25,10 @@ public class ComplierFrame extends JFrame {
     private Semantic semantic;
     private TreeNode root = null;
 
-    private static JTextArea editPane;
+    private static JTextArea editPane=new JTextArea();
     private final static JMenuBar MENUBAR = new JMenuBar();
     private final static JToolBar TOOLBAR = new JToolBar();
+    private final static JScrollPane js = new JScrollPane(editPane);
 
     private JTabbedPane tabbedPanel;
     public static JTextPane consoleArea = new JTextPane();
@@ -110,7 +111,7 @@ public class ComplierFrame extends JFrame {
 
         newButton = new JButton(new ImageIcon(getClass().getResource(
                 "/new.png")));
-        newButton.setToolTipText("新建");
+        newButton.setToolTipText("清除");
         openButton = new JButton(new ImageIcon(getClass().getResource(
                 "/open.png")));
         openButton.setToolTipText("打开");
@@ -180,8 +181,14 @@ public class ComplierFrame extends JFrame {
         proAndConPanel.add(new JScrollPane(problemArea), "错误列表");
 
         editPane.setBackground(new Color(250, 230, 192));
+        js.setHorizontalScrollBarPolicy(
+                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        js.setVerticalScrollBarPolicy(
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        js.setViewportView(editPane);
+        editPanel.add(js);
+        js.setBounds(0, 15, 815, 462);
         editPanel.add(editLabelPanel);
-        editPanel.add(editPane);
         editPanel.add(proAndConPanel);
         editLabelPanel.setBounds(0, 0, 815, 15);
         editPane.setBounds(0, 15, 815, 462);
@@ -227,6 +234,7 @@ public class ComplierFrame extends JFrame {
                     getCurrenRowAndCol();
                 }
                 if (e.getKeyChar() == KeyEvent.VK_ENTER) {
+                    getCurrenRowAndCol();
                     consoleArea.setCaretPosition(doc.getLength());
                 }
                 if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE) {
@@ -245,7 +253,9 @@ public class ComplierFrame extends JFrame {
                 }
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     // 获得光标相对0行0列的位置
+                    getCurrenRowAndCol();
                     int pos = consoleArea.getCaretPosition();
+                    System.out.println(pos);
                     index[0] = index[1];
                     index[1] = pos;
                     try {
@@ -289,7 +299,10 @@ public class ComplierFrame extends JFrame {
 
         runButton.addActionListener(e->semanticRun());
 
+        newButton.addActionListener(e->clear(true));
+
     }
+
 
     //打开文件
     private void open(){
@@ -340,7 +353,7 @@ public class ComplierFrame extends JFrame {
 
     //词法分析
     private void lexerRun(){
-        clear();
+        clear(false);
         String line = editPane.getText();
         String[] lines = line.split("\n");
         Lexer lexer = new Lexer();
@@ -405,7 +418,7 @@ public class ComplierFrame extends JFrame {
         }
         if (root!=null && parseErrorCount==0){
             semantic = new Semantic(root);
-            semantic.run();
+            semantic.start();
             int count = semantic.getErrors().size();
             System.out.println(count);
 
@@ -451,7 +464,9 @@ public class ComplierFrame extends JFrame {
     }
 
     //清理
-    private void clear(){
+    private void clear(boolean isNew){
+        if (isNew)
+            editPane.setText("");
         lexerErrorCount=0;
         parseErrorCount=0;
         if (tokens!=null){
@@ -461,6 +476,7 @@ public class ComplierFrame extends JFrame {
         root=null;
         problemArea.setText("");
         consoleArea.setText("");
+        index = new int[] { 0, 0 };
         JTextArea textArea = new JTextArea();
         tabbedPanel.setComponentAt(0,textArea);
         DefaultTreeModel model = new DefaultTreeModel(root);

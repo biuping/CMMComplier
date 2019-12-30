@@ -1248,6 +1248,9 @@ public class Semantic extends Thread{
                 isScanAssgin=false;
                 System.out.print("输入" + id.getContent() + ":");
                 String value = readInput();
+                int a = Integer.parseInt(value);
+                System.out.println(value.length());
+                System.out.println(a);
                 if (temp.getTag()==Tag.INT){
                     if (isInteger(value)){
                         temp.setIntValue(value);
@@ -1906,6 +1909,7 @@ public class Semantic extends Thread{
                         return null;
                 }
             }
+            System.out.println("array index:"+size);
             return String.valueOf(size - 1);
         }
     }

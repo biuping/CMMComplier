@@ -12,7 +12,7 @@ public class ExpressionPart {
     private String result;
     private boolean isInt;
     private boolean isString;
-    private int childCount;
+
 
     public ExpressionPart(){
         children=new String[2];

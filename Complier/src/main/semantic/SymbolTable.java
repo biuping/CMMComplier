@@ -4,7 +4,7 @@ import java.util.Vector;
 
 /***
  * @author 毕修平
- * 语义分析状态表
+ * 语义分析符号表
  */
 
 public class SymbolTable {

@@ -1,0 +1,22 @@
+//test1
+int a = scan();
+real r = 3.2+1/2.0*1.5;
+if(a==1)
+    print("one");
+else if(a>1&&a<3)
+    print("more one");
+else
+    print(r);
+for(int i=0; i<3; i=i+1){
+    if(i==1)
+        continue;
+    print(i);
+}
+//whileÑ­»·²âÊÔ
+int n = 4;
+while(n>1){
+    n=n-1;
+    if(n==2)
+         break;
+}
+print(n);

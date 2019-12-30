@@ -2,7 +2,7 @@ package main.semantic;
 
 /***
  * @author 毕修平
- * 语义分析状态表中单个状态
+ * 语义分析符号表中单个符号
  */
 
 public class Symbol {
